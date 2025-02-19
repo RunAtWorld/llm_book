@@ -50,4 +50,7 @@ This installation method uses a single container image that bundles Open WebUI w
   docker run -d -p 3000:8080 -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
   ```
 
-  
+
+## 参考
+
+1. [open-webui](https://github.com/open-webui/open-webui)
