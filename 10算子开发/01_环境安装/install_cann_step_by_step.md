@@ -37,3 +37,9 @@ echo "source /usr/local/Ascend/ascend-toolkit/set_env.sh" >> ~/.bashrc
 bash run.sh -r cpu
 ```
 > [参考](https://www.hiascend.com/developer/courses/detail/1691696509765107713)
+
+验证npu的开发环境是否OK
+```
+bash run.sh -r npu
+```
+> [参考](https://www.hiascend.com/developer/courses/detail/1691696509765107713)
