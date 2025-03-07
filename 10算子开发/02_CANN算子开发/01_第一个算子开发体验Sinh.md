@@ -7,7 +7,7 @@
 实现Ascend C算子Sinh,算子命名为SinhCustom，编写其kernel侧代码、host侧代码，并完成aclnn算子调用测试。
 相关算法：sinh(x) = (exp(x) - exp(-x)) / 2.0
 
-代码工程：**[SinhCustom.tar.gz](https://obs-9be7.obs.cn-east-2.myhuaweicloud.com/AscendC/SinhCustom.tar.gz)**
+代码工程：[SinhCustom.tar.gz](https://obs-9be7.obs.cn-east-2.myhuaweicloud.com/AscendC/SinhCustom.tar.gz)
 
 ### 代码编写
 
@@ -164,7 +164,7 @@ bash build.sh
 过程日志如下
 
 ```
-root@19:/home/pae101/src/SinhCustom/SinhCustom# bash build.sh
+root@19:/home/tomy/src/SinhCustom/SinhCustom# bash build.sh
 Preset CMake variables:
 
   ASCEND_CANN_PACKAGE_PATH:PATH="/usr/local/Ascend/ascend-toolkit/latest"
@@ -172,7 +172,7 @@ Preset CMake variables:
   ASCEND_PYTHON_EXECUTABLE:STRING="python3"
   CMAKE_BUILD_TYPE:STRING="Release"
   CMAKE_CROSS_PLATFORM_COMPILER:PATH="/usr/bin/aarch64-linux-gnu-g++"
-  CMAKE_INSTALL_PREFIX:PATH="/home/pae101/src/SinhCustom/SinhCustom/build_out"
+  CMAKE_INSTALL_PREFIX:PATH="/home/tomy/src/SinhCustom/SinhCustom/build_out"
   ENABLE_BINARY_PACKAGE:BOOL="True"
   ENABLE_CROSS_COMPILE:BOOL="False"
   ENABLE_SOURCE_PACKAGE:BOOL="True"
@@ -201,7 +201,7 @@ CMake Warning:
     CMAKE_CROSS_PLATFORM_COMPILER
 
 
--- Build files have been written to: /home/pae101/src/SinhCustom/SinhCustom/build_out
+-- Build files have been written to: /home/tomy/src/SinhCustom/SinhCustom/build_out
 [  7%] Generating scripts/install.sh, scripts/upgrade.sh
 [ 15%] Building CXX object framework/tf_plugin/CMakeFiles/cust_tf_parsers.dir/tensorflow_sinh_custom_plugin.cc.o
 [ 38%] Building CXX object op_host/CMakeFiles/cust_op_proto.dir/sinh_custom.cpp.o
@@ -212,7 +212,7 @@ CMake Warning:
 [ 69%] Generating tbe/.impl_timestamp
 [ 69%] Generating tbe/op_info_cfg/ai_core/ascend910b/aic-ascend910b-ops-info.json
 [ 69%] Building CXX object op_host/CMakeFiles/cust_opapi.dir/__/autogen/aclnn_sinh_custom.cpp.o
-/home/pae101/src/SinhCustom/SinhCustom/build_out/autogen /home/pae101/src/SinhCustom/SinhCustom/build_out/op_kernel/tbe/op_info_cfg/ai_core
+/home/tomy/src/SinhCustom/SinhCustom/build_out/autogen /home/tomy/src/SinhCustom/SinhCustom/build_out/op_kernel/tbe/op_info_cfg/ai_core
 
 
 ==============check valid for ops info start==============
@@ -222,7 +222,7 @@ CMake Warning:
 Compile op info cfg successfully.
 [ 69%] Built target modify_vendor
 [ 69%] Built target ops_info_gen_ascend910b
-[INFO] Succed generated /home/pae101/src/SinhCustom/SinhCustom/build_out/op_kernel/tbe/op_info_cfg/ai_core/npu_supported_ops.json
+[INFO] Succed generated /home/tomy/src/SinhCustom/SinhCustom/build_out/op_kernel/tbe/op_info_cfg/ai_core/npu_supported_ops.json
 [ 69%] Built target ascendc_impl_gen
 [ 69%] Built target npu_supported_ops
 [ 76%] Linking CXX shared library libcust_opapi.so
@@ -265,9 +265,9 @@ SHA256: 0801b43d39ce03e58e4626b09f03b1a138833d1bf47ce5262a825ce70eac03cd
 Skipping md5sum at user request
 
 Self-extractable archive "custom_opp_ubuntu_aarch64.run" successfully created.
-Copy /home/pae101/src/SinhCustom/SinhCustom/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/custom_opp_ubuntu_aarch64.run to /home/pae101/src/SinhCustom/SinhCustom/build_out/
-CPack: - package: /home/pae101/src/SinhCustom/SinhCustom/build_out/custom_opp_ubuntu_aarch64.run.json generated.
-CPack: - package: /home/pae101/src/SinhCustom/SinhCustom/build_out/custom_opp_ubuntu_aarch64.run generated.
+Copy /home/tomy/src/SinhCustom/SinhCustom/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/custom_opp_ubuntu_aarch64.run to /home/tomy/src/SinhCustom/SinhCustom/build_out/
+CPack: - package: /home/tomy/src/SinhCustom/SinhCustom/build_out/custom_opp_ubuntu_aarch64.run.json generated.
+CPack: - package: /home/tomy/src/SinhCustom/SinhCustom/build_out/custom_opp_ubuntu_aarch64.run generated.
 Verifying archive integrity...  100%   SHA256 checksums are OK. All good.
 Uncompressing version:1.0  100%
 [runtime] [2025-03-05 10:48:52] [INFO] copy uninstall sh success
@@ -341,10 +341,10 @@ SHA256: 4016cd996fa25b7a7b5e63fc16bb9ed6c019283d01d4caf8c0dc498d2c5f1047
 Skipping md5sum at user request
 
 Self-extractable archive "custom_opp_ubuntu_aarch64.run" successfully created.
-Copy /home/pae101/src/SinhCustom/SinhCustom/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/custom_opp_ubuntu_aarch64.run to /home/pae101/src/SinhCustom/SinhCustom/build_out/
-CPack: - package: /home/pae101/src/SinhCustom/SinhCustom/build_out/custom_opp_ubuntu_aarch64.run.json generated.
-CPack: - package: /home/pae101/src/SinhCustom/SinhCustom/build_out/custom_opp_ubuntu_aarch64.run generated.
-root@19:/home/pae101/src/SinhCustom/SinhCustom# ./build_out/custom_opp_ubuntu_aarch64.run
+Copy /home/tomy/src/SinhCustom/SinhCustom/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/custom_opp_ubuntu_aarch64.run to /home/tomy/src/SinhCustom/SinhCustom/build_out/
+CPack: - package: /home/tomy/src/SinhCustom/SinhCustom/build_out/custom_opp_ubuntu_aarch64.run.json generated.
+CPack: - package: /home/tomy/src/SinhCustom/SinhCustom/build_out/custom_opp_ubuntu_aarch64.run generated.
+root@19:/home/tomy/src/SinhCustom/SinhCustom# ./build_out/custom_opp_ubuntu_aarch64.run
 Verifying archive integrity...  100%   SHA256 checksums are OK. All good.
 Uncompressing version:1.0  100%
 [runtime] [2025-03-05 10:50:31] [INFO] copy uninstall sh success
@@ -378,8 +378,8 @@ bash run.sh
 过程日志如下
 
 ```
-root@19:/home/pae101/src/SinhCustom# cd AclNNInvocation/
-root@19:/home/pae101/src/SinhCustom/AclNNInvocation# bash run.sh
+root@19:/home/tomy/src/SinhCustom# cd AclNNInvocation/
+root@19:/home/tomy/src/SinhCustom/AclNNInvocation# bash run.sh
 INFO: generate input data success!
 -- The C compiler identification is GNU 11.4.0
 -- The CXX compiler identification is GNU 11.4.0
@@ -397,13 +397,13 @@ INFO: generate input data success!
 -- env LIB_PATH: /usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/lib64
 -- Configuring done
 -- Generating done
--- Build files have been written to: /home/pae101/src/SinhCustom/AclNNInvocation/build
+-- Build files have been written to: /home/tomy/src/SinhCustom/AclNNInvocation/build
 INFO: cmake success!
 [ 20%] Building CXX object CMakeFiles/execute_sinh_op.dir/operator_desc.cpp.o
 [ 40%] Building CXX object CMakeFiles/execute_sinh_op.dir/op_runner.cpp.o
 [ 60%] Building CXX object CMakeFiles/execute_sinh_op.dir/main.cpp.o
 [ 80%] Building CXX object CMakeFiles/execute_sinh_op.dir/common.cpp.o
-[100%] Linking CXX executable /home/pae101/src/SinhCustom/AclNNInvocation/output/execute_sinh_op
+[100%] Linking CXX executable /home/tomy/src/SinhCustom/AclNNInvocation/output/execute_sinh_op
 [100%] Built target execute_sinh_op
 INFO: make success!
 INFO: execute op!
