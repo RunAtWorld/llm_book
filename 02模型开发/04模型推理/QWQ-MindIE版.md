@@ -1,4 +1,5 @@
 # QWQ-MindIE版
+> 官方说明：https://modelscope.cn/models/Qwen/QwQ-32B
 
 ## 镜像
 
