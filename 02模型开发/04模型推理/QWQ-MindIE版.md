@@ -40,7 +40,7 @@ docker run -it -d --net=host --shm-size=10g \
     --device=/dev/devmm_svm \
     -v /usr/local/Ascend/driver:/usr/local/Ascend/driver:ro \
     -v /usr/local/sbin:/usr/local/sbin:ro \
-    -v /home/data/qwq32b_mindie/QwQ-32B:/nfs_share/weights/QwQ-32B:ro \
+    -v /home/data/qwq32b_mindie/QwQ-32B:/weights/qwq32b_mindie/QwQ-32B:ro \
     mindie:2.0.T3-20250212-800I-A2-py311-openeuler24.03-lts-aarch64 bash
 ```
 
@@ -108,7 +108,7 @@ cd $ATB_SPEED_HOME_PATH
 torchrun --nproc_per_node 2 \
          --master_port 20037 \
          -m examples.run_pa \
-         --model_path /nfs_share/weights/QwQ-32B \
+         --model_path /weights/qwq32b_mindie/QwQ-32B \
          --max_output_length 20
 ```
 
@@ -125,14 +125,13 @@ vim /usr/local/Ascend/mindie/latest/mindie-service/conf/config.json
 ```json
 {
 ...
-"ServerConfig": {
-    "_comment": "服务器相关配置",
-    "port": 1040,           // 自定义主服务端口
-    "managementPort": 1041, // 自定义管理端口
-    "metricsPort": 1042,    // 自定义指标端口
-    "httpsEnabled": false  //关闭https验证
-  },
-
+  "ServerConfig": {
+      "_comment": "服务器相关配置",
+      "port": 1040,           // 自定义主服务端口
+      "managementPort": 1041, // 自定义管理端口
+      "metricsPort": 1042,    // 自定义指标端口
+      "httpsEnabled": false  //关闭https验证
+    },
   "BackendConfig": {
     "_comment": "后端服务相关配置",
     "npuDeviceIds": [[0, 1, 2, 3]],
@@ -142,23 +141,13 @@ vim /usr/local/Ascend/mindie/latest/mindie-service/conf/config.json
         {
           "_comment": "模型配置项",
           "modelName": "qwen2", //修改模型名称
-          "modelWeightPath": "/nfs_share/weights/QwQ-32B", //修改模型权重路径
+          "modelWeightPath": "/weights/qwq32b_mindie/QwQ-32B", //修改模型权重路径
           "worldSize": 4
         }
       ]
     }
   }
 }
-```
-
-在在宿主机上修改模型权重权限为 640
-```
-chmod -R 640 /home/data/qwq32b/QwQ-32B  #在宿主机上修改
-```
-
-在容器中修改配置文件为 640
-```
-chmod 640 /usr/local/Ascend/mindie/latest/mindie-service/conf/config.json
 ```
 
 - 拉起服务化
@@ -196,3 +185,13 @@ curl -X POST 127.0.0.1:1040/v1/chat/completions \
 ## 参考
 1. [QwQ-32B昇腾魔乐社区部署](https://modelers.cn/models/Models_Ecosystem/QwQ-32B)
 
+## FAQ
+1. 关于权限:在在宿主机上修改模型权重权限为 640
+  ```
+  chmod -R 640 /home/data/qwq32b/QwQ-32B  #在宿主机上修改
+  ```
+
+  在容器中修改配置文件为 640
+  ```
+  chmod 640 /usr/local/Ascend/mindie/latest/mindie-service/conf/config.json
+  ```
