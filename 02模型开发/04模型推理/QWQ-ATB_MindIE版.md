@@ -156,6 +156,11 @@ vim /usr/local/Ascend/mindie/latest/mindie-service/conf/config.json
 cd /usr/local/Ascend/mindie/latest/mindie-service/bin
 ./mindieservice_daemon
 ```
+后台启动
+```shell
+cd /usr/local/Ascend/mindie/latest/mindie-service/bin
+nohup ./mindieservice_daemon > /root/service.log 2>&1 &
+```
 
 - 新建窗口测试（OpenAI 接口）
 

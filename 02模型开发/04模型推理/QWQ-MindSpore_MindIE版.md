@@ -119,6 +119,13 @@ MindSpore Transformers提供了一键拉起MindIE脚本，脚本中已预置环�
 cd mindformers/scripts
 bash run_mindie.sh --model-name QwQ-32B --model-path /home/work/QwQ-32B --max-prefill-batch-size 1
 ```
+> 以上进程会以后台方式启动，查看日志: tail -f output.log
+
+终止进程
+```
+pkill -9 mind
+pkill -9 python
+```
 
 #### 参数说明
 - --model-name：设置模型名称
