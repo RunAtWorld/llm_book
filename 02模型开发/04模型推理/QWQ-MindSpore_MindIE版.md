@@ -69,7 +69,7 @@ from openmind_hub import snapshot_download
 
 snapshot_download(
     repo_id="MindSpore-Lab/QwQ-32B",
-    local_dir="/home/work/QwQ-32B",
+    local_dir="./QwQ-32B",
     local_dir_use_symlink=False
 )
 ```
