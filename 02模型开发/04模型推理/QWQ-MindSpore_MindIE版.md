@@ -47,7 +47,7 @@ docker run -itd --privileged  --name=qwq-32b --net=host \
    -v /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi \
    -v /usr/local/sbin:/usr/local/sbin \
    -v /etc/hccn.conf:/etc/hccn.conf \
-   -v /home/data/qwq32b_mindspore/QwQ-32B:/home/work/QwQ-32B \ #映射权重路径
+   -v /home/data/qwq32b_mindspore/QwQ-32B:/home/work/QwQ-32B \
    swr.cn-central-221.ovaijisuan.com/mindformers/deepseek_v3_mindspore2.5.0-infer:20250217 \
    bash
 
@@ -116,8 +116,7 @@ MindSpore Transformers提供了一键拉起MindIE脚本，脚本中已预置环�
 进入 `mindformers/scripts` 目录下，执行MindIE启动脚本
 
 ```bash
-cd mindformers/scripts
-bash run_mindie.sh --model-name QwQ-32B --model-path /home/work/QwQ-32B --max-prefill-batch-size 1
+cd /home/work/mindformers/scripts && bash run_mindie.sh --model-name QwQ-32B --model-path /home/work/QwQ-32B --max-prefill-batch-size 1
 ```
 > 以上进程会以后台方式启动，查看日志: tail -f output.log
 
@@ -140,8 +139,22 @@ tail -f output.log
 ### 3. 执行推理请求测试
 执行以下命令发送流式推理请求进行测试：
 ```bash
-curl -w "\ntime_total=%{time_total}\n" -H "Accept: application/json" -H "Content-type: application/json" -X POST -d '{"inputs": "请介绍一个北京的景点", "parameters": {"do_sample": false, "max_new_tokens": 128}, "stream": false}' http://127.0.0.1:1025/generate_stream &
+curl -w "\ntime_total=%{time_total}\n" -H "Accept: application/json" -H "Content-type: application/json" -X POST -d '{"inputs": "请介绍一个北京的景点", "parameters": {"do_sample": false, "max_new_tokens": 128}, "stream": false}' http://127.0.0.1:1025/generate_stream
 ```
 
-## 声明
-本文档提供的模型代码、权重文件和部署镜像，当前仅限于基于昇思MindSpore AI框架体验QwQ-32B的部署效果，不支持生产环境部署。相关使用问题请反馈至Issue。 
+## 性能测试
+> 参考 [性能测试](https://www.hiascend.com/document/detail/zh/mindie/100/mindieservice/servicedev/mindie_service0012.html)
+
+```
+benchmark \
+--DatasetPath "/home/work/QwQ-32B/gsm8k" \
+--DatasetType "gsm8k" \
+--ModelName "QwQ-32B" \
+--ModelPath "/home/work/QwQ-32B" \
+--TestType client \
+--Http http://127.0.0.1:1025 \
+--ManagementHttp http://127.0.0.2:1026 \
+--Concurrency 10 \
+--DoSampling False \
+--MaxOutputLen 512
+```
