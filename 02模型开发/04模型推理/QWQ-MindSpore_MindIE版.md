@@ -144,6 +144,7 @@ curl -w "\ntime_total=%{time_total}\n" -H "Accept: application/json" -H "Content
 
 ## 性能测试
 > 参考 [性能测试](https://www.hiascend.com/document/detail/zh/mindie/100/mindieservice/servicedev/mindie_service0012.html)
+> [pip依赖参考](https://www.hiascend.com/document/detail/zh/mindie/100/envdeployment/instg/mindie_instg_0023.html)
 
 ```
 benchmark \
