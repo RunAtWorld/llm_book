@@ -40,7 +40,7 @@ docker run -it -d --net=host --shm-size=10g \
     --device=/dev/devmm_svm \
     -v /usr/local/Ascend/driver:/usr/local/Ascend/driver:ro \
     -v /usr/local/sbin:/usr/local/sbin:ro \
-    -v /home/data/qwq32b_mindie/QwQ-32B:/weights/qwq32b_mindie/QwQ-32B:ro \
+    -v /home/data/qwq32b_mindie/QwQ-32B:/weights/qwq32b_mindie/QwQ-32B \
     mindie:2.0.T3-20250212-800I-A2-py311-openeuler24.03-lts-aarch64 bash
 ```
 
@@ -93,18 +93,15 @@ docker exec -it qwq32b bash
 ### 纯模型推理
 
 #### 对话测试
-
+> 如果需要设置可见卡 export ASCEND_RT_VISIBLE_DEVICES=4,5,6,7
 进入 llm_model 路径
 
 `ATB_SPEED_HOME_PATH` 默认 `/usr/local/Ascend/llm_model`,以情况而定
 
-```shell
-cd $ATB_SPEED_HOME_PATH
-```
-
 执行对话测试
 
 ```shell
+cd $ATB_SPEED_HOME_PATH
 torchrun --nproc_per_node 2 \
          --master_port 20037 \
          -m examples.run_pa \
@@ -140,7 +137,7 @@ vim /usr/local/Ascend/mindie/latest/mindie-service/conf/config.json
       "ModelConfig": [
         {
           "_comment": "模型配置项",
-          "modelName": "qwen2", //修改模型名称
+          "modelName": "QwQ-32B", //修改模型名称
           "modelWeightPath": "/weights/qwq32b_mindie/QwQ-32B", //修改模型权重路径
           "worldSize": 4
         }
@@ -178,7 +175,7 @@ curl -X POST 127.0.0.1:1040/v1/chat/completions \
     \"temperature\": 0.6,
     \"top_p\": 0.95,
     \"top_k\": 20,
-    \"model\": \"qwen2\"
+    \"model\": \"QwQ-32B\"
   }"
 ```
 
@@ -200,3 +197,22 @@ curl -X POST 127.0.0.1:1040/v1/chat/completions \
   ```
   chmod 640 /usr/local/Ascend/mindie/latest/mindie-service/conf/config.json
   ```
+
+## 性能测试
+> 参考 [性能测试](https://www.hiascend.com/document/detail/zh/mindie/100/mindieservice/servicedev/mindie_service0012.html)
+
+### 4卡B3 gsm8k测试结果
+
+```
+nohup benchmark \
+--DatasetPath "/weights/qwq32b_mindie/QwQ-32B/gsm8k" \
+--DatasetType "gsm8k" \
+--ModelName "QwQ-32B" \
+--ModelPath "/weights/qwq32b_mindie/QwQ-32B" \
+--TestType client \
+--Http http://127.0.0.1:1025 \
+--ManagementHttp http://127.0.0.2:1026 \
+--Concurrency 10 \
+--DoSampling False \
+--MaxOutputLen 512 > /root/atb_mindie_gsm8k_benchmark.log 2>&1 &
+```

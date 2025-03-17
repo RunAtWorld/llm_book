@@ -146,6 +146,8 @@ curl -w "\ntime_total=%{time_total}\n" -H "Accept: application/json" -H "Content
 > 参考 [性能测试](https://www.hiascend.com/document/detail/zh/mindie/100/mindieservice/servicedev/mindie_service0012.html)
 > [pip依赖参考](https://www.hiascend.com/document/detail/zh/mindie/100/envdeployment/instg/mindie_instg_0023.html)
 
+### 4卡B3 gsm8k测试结果
+
 ```
 benchmark \
 --DatasetPath "/home/work/QwQ-32B/gsm8k" \
@@ -158,4 +160,289 @@ benchmark \
 --Concurrency 10 \
 --DoSampling False \
 --MaxOutputLen 512
+```
+
+模型配置
+
+```
+seed: 0
+output_dir: './output' # path to save checkpoint/strategy
+load_checkpoint: "/home/work/QwQ-32B/checkpoint_dir"
+src_strategy_path_or_dir: ''
+auto_trans_ckpt: True  # If true, auto transform load_checkpoint to load in distributed model
+only_save_strategy: False
+resume_training: False
+use_parallel: True
+run_mode: 'predict'
+load_ckpt_format: 'safetensors'
+
+# trainer config
+trainer:
+  type: CausalLanguageModelingTrainer
+  model_name: 'qwq_32b'
+
+# runner config
+runner_config:
+  epochs: 5
+  batch_size: 1
+  sink_mode: True
+  sink_size: 2
+runner_wrapper:
+  type: MFTrainOneStepCell
+  scale_sense:
+    type: DynamicLossScaleUpdateCell
+    loss_scale_value: 65536
+    scale_factor: 2
+    scale_window: 1000
+  use_clip_grad: True
+
+# default parallel of device num = 8 for Atlas 800T A2
+parallel_config:
+  data_parallel: 1
+  model_parallel: 4
+  pipeline_stage: 1
+  micro_batch_num: 1
+  vocab_emb_dp: False
+  gradient_aggregation_group: 4
+# when model parallel is greater than 1, we can set micro_batch_interleave_num=2, that may accelerate the train process.
+micro_batch_interleave_num: 1
+
+model:
+  model_config:
+    type: LlamaConfig
+    batch_size: 1
+    seq_length: 32768
+    hidden_size: 5120
+    num_layers: 64
+    num_heads: 40
+    n_kv_heads: 8
+    vocab_size: 152064
+    intermediate_size: 27648
+    max_position_embeddings: 32768
+    qkv_has_bias: True
+    rms_norm_eps: 1.0e-6
+    theta: 1000000.0
+    emb_dropout_prob: 0.0
+    eos_token_id: [151645,151643]
+    pad_token_id: 151643
+    bos_token_id: 151643
+    compute_dtype: "bfloat16"
+    layernorm_compute_type: "float32"
+    softmax_compute_type: "float32"
+    rotary_dtype: "bfloat16"
+    param_init_type: "bfloat16"
+    use_past: True
+    use_flash_attention: True
+    block_size: 32
+    num_blocks: 1024
+    use_past_shard: False
+    offset: 0
+    checkpoint_name_or_path: ""
+    repetition_penalty: 1.05
+    temperature: 0.7
+    max_decode_length: 512
+    top_k: 20
+    top_p: 0.8
+    do_sample: True
+    is_dynamic: True
+    qkv_concat: True
+    auto_map:
+      AutoTokenizer: [qwen2_5_tokenizer.Qwen2Tokenizer, null]
+  arch:
+    type: LlamaForCausalLM
+
+processor:
+  return_tensors: ms
+  tokenizer:
+    model_max_length: 131072
+    vocab_file: "/home/work/QwQ-32B/vocab.json"
+    merges_file: "/home/work/QwQ-32B/merges.txt"
+    unk_token: null
+    pad_token: "<|endoftext|>"
+    eos_token: "<|im_end|>"
+    bos_token: null
+    chat_template: "{%- if tools %}\n    {{- '<|im_start|>system\\n' }}\n    {%- if messages[0]['role'] == 'system' %}\n        {{- messages[0]['content'] }}\n    {%- else %}\n        {{- 'You are Qwen, created by Alibaba Cloud. You are a helpful assistant.' }}\n    {%- endif %}\n    {{- \"\\n\\n# Tools\\n\\nYou may call one or more functions to assist with the user query.\\n\\nYou are provided with function signatures within <tools></tools> XML tags:\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\\n\\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\\n<tool_call>\\n{{\\\"name\\\": <function-name>, \\\"arguments\\\": <args-json-object>}}\\n</tool_call><|im_end|>\\n\" }}\n{%- else %}\n    {%- if messages[0]['role'] == 'system' %}\n        {{- '<|im_start|>system\\n' + messages[0]['content'] + '<|im_end|>\\n' }}\n    {%- else %}\n        {{- '<|im_start|>system\\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- for message in messages %}\n    {%- if (message.role == \"user\") or (message.role == \"system\" and not loop.first) or (message.role == \"assistant\" and not message.tool_calls) %}\n        {{- '<|im_start|>' + message.role + '\\n' + message.content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {{- '<|im_start|>' + message.role }}\n        {%- if message.content %}\n            {{- '\\n' + message.content }}\n        {%- endif %}\n        {%- for tool_call in message.tool_calls %}\n            {%- if tool_call.function is defined %}\n                {%- set tool_call = tool_call.function %}\n            {%- endif %}\n            {{- '\\n<tool_call>\\n{\"name\": \"' }}\n            {{- tool_call.name }}\n            {{- '\", \"arguments\": ' }}\n            {{- tool_call.arguments | tojson }}\n            {{- '}\\n</tool_call>' }}\n        {%- endfor %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if (loop.index0 == 0) or (messages[loop.index0 - 1].role != \"tool\") %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- message.content }}\n        {{- '\\n</tool_response>' }}\n        {%- if loop.last or (messages[loop.index0 + 1].role != \"tool\") %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n{%- endif %}\n"
+    type: Qwen2Tokenizer
+  type: Qwen2Processor
+
+# mindspore context init config
+context:
+  mode: 0 #0--Graph Mode; 1--Pynative Mode
+  device_target: "Ascend"
+  ascend_config:
+    precision_mode: "must_keep_origin_dtype"
+  max_call_depth: 10000
+  max_device_memory: "59GB"
+  save_graphs: False
+  save_graphs_path: "./graph"
+  device_id: 0
+
+# parallel context config
+parallel:
+  parallel_mode: 1 # 0-data parallel, 1-semi-auto parallel, 2-auto parallel, 3-hybrid parallel
+  gradients_mean: False
+  enable_alltoall: False
+  full_batch: True
+  search_mode: "sharding_propagation"
+  enable_parallel_optimizer: False
+  strategy_ckpt_save_file: "./ckpt_strategy.ckpt"
+  parallel_optimizer_config:
+    gradient_accumulation_shard: False
+    parallel_optimizer_threshold: 64
+```
+
+mindIE配置
+
+```
+{
+    "Version" : "1.0.0",
+    "LogConfig" :
+    {
+        "logLevel" : "Info",
+        "logFileSize" : 20,
+        "logFileNum" : 20,
+        "logPath" : "logs/mindie-server.log"
+    },
+
+    "ServerConfig" :
+    {
+        "ipAddress": "127.0.0.1",
+        "managementIpAddress": "127.0.0.2",
+        "port": 1025,
+        "managementPort": 1026,
+        "metricsPort": 1027,
+        "allowAllZeroIpListening" : false,
+        "maxLinkNum" : 1000,
+        "httpsEnabled": false,
+        "fullTextEnabled" : false,
+        "tlsCaPath" : "security/ca/",
+        "tlsCaFile" : ["ca.pem"],
+        "tlsCert" : "security/certs/server.pem",
+        "tlsPk" : "security/keys/server.key.pem",
+        "tlsPkPwd" : "security/pass/key_pwd.txt",
+        "tlsCrlPath" : "security/certs/",
+        "tlsCrlFiles" : ["server_crl.pem"],
+        "managementTlsCaFile" : ["management_ca.pem"],
+        "managementTlsCert" : "security/certs/management/server.pem",
+        "managementTlsPk" : "security/keys/management/server.key.pem",
+        "managementTlsPkPwd" : "security/pass/management/key_pwd.txt",
+        "managementTlsCrlPath" : "security/management/certs/",
+        "managementTlsCrlFiles" : ["server_crl.pem"],
+        "kmcKsfMaster" : "tools/pmt/master/ksfa",
+        "kmcKsfStandby" : "tools/pmt/standby/ksfb",
+        "inferMode" : "standard",
+        "interCommTLSEnabled" : true,
+        "interCommPort" : 1121,
+        "interCommTlsCaPath" : "security/grpc/ca/",
+        "interCommTlsCaFiles" : ["ca.pem"],
+        "interCommTlsCert" : "security/grpc/certs/server.pem",
+        "interCommPk" : "security/grpc/keys/server.key.pem",
+        "interCommPkPwd" : "security/grpc/pass/key_pwd.txt",
+        "interCommTlsCrlPath" : "security/grpc/certs/",
+        "interCommTlsCrlFiles" : ["server_crl.pem"],
+        "openAiSupport" : "vllm"
+    },
+
+    "BackendConfig" : {
+        "backendName" : "mindieservice_llm_engine",
+        "modelInstanceNumber" : 1,
+        "npuDeviceIds" : [[0,1,2,3]],
+        "tokenizerProcessNumber" : 8,
+        "multiNodesInferEnabled": false,
+        "multiNodesInferPort" : 1120,
+        "interNodeTLSEnabled" : true,
+        "interNodeTlsCaPath" : "security/grpc/ca/",
+        "interNodeTlsCaFiles" : ["ca.pem"],
+        "interNodeTlsCert" : "security/grpc/certs/server.pem",
+        "interNodeTlsPk" : "security/grpc/keys/server.key.pem",
+        "interNodeTlsPkPwd" : "security/grpc/pass/mindie_server_key_pwd.txt",
+        "interNodeTlsCrlPath" : "security/grpc/certs/",
+        "interNodeTlsCrlFiles" : ["server_crl.pem"],
+        "interNodeKmcKsfMaster" : "tools/pmt/master/ksfa",
+        "interNodeKmcKsfStandby" : "tools/pmt/standby/ksfb",
+        "ModelDeployConfig" :
+        {
+            "maxSeqLen": 2560,
+            "maxInputTokenLen": 2048,
+            "truncation": false,
+            "ModelConfig" : [
+                {
+                    "modelInstanceType" : "Standard",
+                    "modelName": "QwQ-32B",
+                    "modelWeightPath": "/home/work/QwQ-32B",
+                    "worldSize": 4,
+                    "cpuMemSize" : 5,
+                    "npuMemSize": 8,
+                    "backendType": "ms",
+                    "trustRemoteCode" : false
+                }
+            ]
+        },
+
+        "ScheduleConfig" :
+        {
+            "templateType": "Standard",
+            "templateName" : "Standard_LLM",
+            "cacheBlockSize" : 16,
+            "maxPrefillBatchSize": 1,
+            "maxPrefillTokens": 8192,
+            "prefillTimeMsPerReq" : 150,
+            "prefillPolicyType" : 0,
+            "decodeTimeMsPerReq" : 50,
+            "decodePolicyType" : 0,
+            "maxBatchSize" : 1,
+            "maxIterTimes": 512,
+            "maxPreemptCount": 0,
+            "supportSelectBatch": false,
+            "maxQueueDelayMicroseconds" : 5000
+        }
+    }
+}
+```
+
+gsm8k_benchmark 测试结果
+
+```
+[2025-03-15 15:14:28.658+00:00] [18521] [281473289023520] [benchmark] [INFO] [output.py:114]
+The BenchMark test performance metric result is:
++---------------------+----------------+-----------------+----------------+----------------+----------------+----------------+----------------+------+
+|              Metric |        average |             max |            min |            P75 |            P90 |        SLO_P90 |            P99 |    N |
++---------------------+----------------+-----------------+----------------+----------------+----------------+----------------+----------------+------+
+|      FirstTokenTime |     88.1944 ms |     798.5878 ms |     58.7664 ms |     94.6069 ms |    101.4279 ms |    101.4279 ms |    117.7145 ms | 8792 |
+|          DecodeTime |    264.9084 ms |  221952.7402 ms |       0.011 ms |     26.7239 ms |     28.9207 ms |    473.2623 ms |     48.6279 ms | 8792 |
+|      LastDecodeTime |      27.154 ms |      60.4694 ms |           0 ms |     27.6552 ms |     29.8138 ms |     29.8138 ms |      47.966 ms | 8792 |
+|       MaxDecodeTime |  107179.843 ms |  221952.7402 ms |  64154.0973 ms | 114097.2967 ms | 119005.0737 ms | 119005.0737 ms | 125618.2632 ms | 8792 |
+|        GenerateTime | 118536.9295 ms |  235183.5744 ms |     69.5162 ms | 126327.1709 ms | 131720.5082 ms | 131720.5082 ms | 138796.4644 ms | 8792 |
+|         InputTokens |        59.8964 |             212 |             12 |           71.0 |           89.0 |           89.0 |          128.0 | 8792 |
+|     GeneratedTokens |       448.1056 |             512 |              1 |          512.0 |          512.0 |          512.0 |          512.0 | 8792 |
+| GeneratedTokenSpeed | 3.8218 token/s | 14.3851 token/s | 0.3871 token/s | 4.3693 token/s | 4.6785 token/s | 4.6785 token/s |  5.501 token/s | 8792 |
+| GeneratedCharacters |      1510.9037 |            2545 |              0 |        1816.25 |         1967.0 |         1967.0 |         2213.0 | 8792 |
+|           Tokenizer |      2.3106 ms |       11.507 ms |      0.7014 ms |      2.6737 ms |       3.729 ms |       3.729 ms |      6.4025 ms | 8792 |
+|         Detokenizer |      1.0502 ms |       4.0472 ms |       0.015 ms |      1.2019 ms |      1.2228 ms |      1.2228 ms |      1.2856 ms | 8792 |
+|  CharactersPerToken |         3.3718 |               / |              / |              / |              / |              / |              / | 8792 |
+|  PostProcessingTime |           0 ms |            0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms | 8792 |
+|         ForwardTime |           0 ms |            0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms | 8792 |
+|    PrefillBatchsize |            1.0 |               1 |              1 |            1.0 |            1.0 |            1.0 |            1.0 | 8792 |
+|    DecoderBatchsize |            1.0 |               1 |              1 |            1.0 |            1.0 |              / |            1.0 | 8792 |
+|       QueueWaitTime | 238119.3935 μs |    221922274 μs |          10 μs |        55.0 μs |        65.0 μs |           / μs |       142.0 μs | 8792 |
++---------------------+----------------+-----------------+----------------+----------------+----------------+----------------+----------------+------+
+[2025-03-15 15:14:28.660+00:00] [18521] [281473289023520] [benchmark] [INFO] [output.py:120]
+The BenchMark test common metric result is:
++------------------------+--------------------------+
+|          Common Metric |                    Value |
++------------------------+--------------------------+
+|            CurrentTime |      2025-03-15 15:14:28 |
+|            TimeElapsed |            104279.0743 s |
+|             DataSource | /home/work/QwQ-32B/gsm8k |
+|                 Failed |                0( 0.0% ) |
+|               Returned |           8792( 100.0% ) |
+|                  Total |           8792[ 100.0% ] |
+|            Concurrency |                       10 |
+|              ModelName |                  QwQ-32B |
+|                   lpct |                1.4724 ms |
+|             Throughput |             0.0843 req/s |
+|          GenerateSpeed |          37.7808 token/s |
+| GenerateSpeedPerClient |           3.7781 token/s |
+|               accuracy |                        / |
++------------------------+--------------------------+
 ```
