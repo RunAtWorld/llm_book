@@ -210,9 +210,10 @@ nohup benchmark \
 --ModelName "QwQ-32B" \
 --ModelPath "/weights/qwq32b_mindie/QwQ-32B" \
 --TestType client \
---Http http://127.0.0.1:1025 \
---ManagementHttp http://127.0.0.2:1026 \
+--Http http://127.0.0.1:1040 \
+--ManagementHttp http://127.0.0.2:1041 \
 --Concurrency 10 \
 --DoSampling False \
---MaxOutputLen 512 > /root/atb_mindie_gsm8k_benchmark.log 2>&1 &
+--MaxOutputLen 512 > /weights/qwq32b_mindie/QwQ-32B/atb_mindie_gsm8k_benchmark.log 2>&1 &
+tail -f /weights/qwq32b_mindie/QwQ-32B/atb_mindie_gsm8k_benchmark.log
 ```

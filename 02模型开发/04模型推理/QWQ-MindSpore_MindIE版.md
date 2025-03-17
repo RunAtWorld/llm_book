@@ -149,6 +149,8 @@ curl -w "\ntime_total=%{time_total}\n" -H "Accept: application/json" -H "Content
 ### 4卡B3 gsm8k测试结果
 
 ```
+cd /home/work/mindformers
+nohup \
 benchmark \
 --DatasetPath "/home/work/QwQ-32B/gsm8k" \
 --DatasetType "gsm8k" \
@@ -159,7 +161,9 @@ benchmark \
 --ManagementHttp http://127.0.0.2:1026 \
 --Concurrency 10 \
 --DoSampling False \
---MaxOutputLen 512
+--MaxOutputLen 512 \
+ > /home/work/QwQ-32B/gsm8k/mindspore_mindie_gsm8k_benchmark.log 2>&1 &
+tail -f /home/work/QwQ-32B/gsm8k/mindspore_mindie_gsm8k_benchmark.log
 ```
 
 模型配置
