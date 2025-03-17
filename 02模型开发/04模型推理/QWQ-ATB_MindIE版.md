@@ -204,6 +204,7 @@ curl -X POST 127.0.0.1:1040/v1/chat/completions \
 ### 4卡B3 gsm8k测试结果
 
 ```
+export MINDIE_LOG_TO_STDOUT="benchmark:1; client:1"
 nohup benchmark \
 --DatasetPath "/weights/qwq32b_mindie/QwQ-32B/gsm8k" \
 --DatasetType "gsm8k" \

@@ -149,6 +149,7 @@ curl -w "\ntime_total=%{time_total}\n" -H "Accept: application/json" -H "Content
 ### 4卡B3 gsm8k测试结果
 
 ```
+export MINDIE_LOG_TO_STDOUT="benchmark:1; client:1"
 cd /home/work/mindformers
 nohup \
 benchmark \
