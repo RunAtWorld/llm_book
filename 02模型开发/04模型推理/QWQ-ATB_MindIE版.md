@@ -159,7 +159,7 @@ cd /usr/local/Ascend/mindie/latest/mindie-service/bin
 nohup ./mindieservice_daemon > /root/service.log 2>&1 &
 ```
 
-- 新建窗口测试（OpenAI 接口）
+- 测试OpenAI 接口
 
 ```shell
 curl -X POST 127.0.0.1:1040/v1/chat/completions \
@@ -218,3 +218,162 @@ nohup benchmark \
 --MaxOutputLen 512 > /weights/qwq32b_mindie/QwQ-32B/atb_mindie_gsm8k_benchmark.log 2>&1 &
 tail -f /weights/qwq32b_mindie/QwQ-32B/atb_mindie_gsm8k_benchmark.log
 ```
+
+mindIE配置
+
+```
+{
+    "Version" : "1.0.0",
+    "LogConfig" :
+    {
+        "logLevel" : "Info",
+        "logFileSize" : 20,
+        "logFileNum" : 20,
+        "logPath" : "logs/mindie-server.log"
+    },
+
+    "ServerConfig" :
+    {
+        "ipAddress" : "127.0.0.1",
+        "managementIpAddress" : "127.0.0.2",
+        "port" : 1040,
+        "managementPort" : 1041,
+        "metricsPort" : 1042,
+        "allowAllZeroIpListening" : false,
+        "maxLinkNum" : 1000,
+        "httpsEnabled" : false,
+        "fullTextEnabled" : false,
+        "tlsCaPath" : "security/ca/",
+        "tlsCaFile" : ["ca.pem"],
+        "tlsCert" : "security/certs/server.pem",
+        "tlsPk" : "security/keys/server.key.pem",
+        "tlsPkPwd" : "security/pass/key_pwd.txt",
+        "tlsCrlPath" : "security/certs/",
+        "tlsCrlFiles" : ["server_crl.pem"],
+        "managementTlsCaFile" : ["management_ca.pem"],
+        "managementTlsCert" : "security/certs/management/server.pem",
+        "managementTlsPk" : "security/keys/management/server.key.pem",
+        "managementTlsPkPwd" : "security/pass/management/key_pwd.txt",
+        "managementTlsCrlPath" : "security/management/certs/",
+        "managementTlsCrlFiles" : ["server_crl.pem"],
+        "kmcKsfMaster" : "tools/pmt/master/ksfa",
+        "kmcKsfStandby" : "tools/pmt/standby/ksfb",
+        "inferMode" : "standard",
+        "interCommTLSEnabled" : true,
+        "interCommPort" : 1121,
+        "interCommTlsCaPath" : "security/grpc/ca/",
+        "interCommTlsCaFiles" : ["ca.pem"],
+        "interCommTlsCert" : "security/grpc/certs/server.pem",
+        "interCommPk" : "security/grpc/keys/server.key.pem",
+        "interCommPkPwd" : "security/grpc/pass/key_pwd.txt",
+        "interCommTlsCrlPath" : "security/grpc/certs/",
+        "interCommTlsCrlFiles" : ["server_crl.pem"],
+        "openAiSupport" : "vllm"
+    },
+
+    "BackendConfig" : {
+        "backendName" : "mindieservice_llm_engine",
+        "modelInstanceNumber" : 1,
+        "npuDeviceIds" : [[4,5,6,7]],
+        "tokenizerProcessNumber" : 8,
+        "multiNodesInferEnabled" : false,
+        "multiNodesInferPort" : 1120,
+        "interNodeTLSEnabled" : true,
+        "interNodeTlsCaPath" : "security/grpc/ca/",
+        "interNodeTlsCaFiles" : ["ca.pem"],
+        "interNodeTlsCert" : "security/grpc/certs/server.pem",
+        "interNodeTlsPk" : "security/grpc/keys/server.key.pem",
+        "interNodeTlsPkPwd" : "security/grpc/pass/mindie_server_key_pwd.txt",
+        "interNodeTlsCrlPath" : "security/grpc/certs/",
+        "interNodeTlsCrlFiles" : ["server_crl.pem"],
+        "interNodeKmcKsfMaster" : "tools/pmt/master/ksfa",
+        "interNodeKmcKsfStandby" : "tools/pmt/standby/ksfb",
+        "ModelDeployConfig" :
+        {
+            "maxSeqLen" : 2560,
+            "maxInputTokenLen" : 2048,
+            "truncation" : false,
+            "ModelConfig" : [
+                {
+                    "modelInstanceType" : "Standard",
+                    "modelName" : "QwQ-32B",
+                    "modelWeightPath" : "/weights/qwq32b_mindie/QwQ-32B",
+                    "worldSize" : 4,
+                    "cpuMemSize" : 5,
+                    "npuMemSize" : -1,
+                    "backendType" : "atb",
+                    "trustRemoteCode" : false
+                }
+            ]
+        },
+
+        "ScheduleConfig" :
+        {
+            "templateType" : "Standard",
+            "templateName" : "Standard_LLM",
+            "cacheBlockSize" : 128,
+
+            "maxPrefillBatchSize" : 50,
+            "maxPrefillTokens" : 8192,
+            "prefillTimeMsPerReq" : 150,
+            "prefillPolicyType" : 0,
+
+            "decodeTimeMsPerReq" : 50,
+            "decodePolicyType" : 0,
+            "maxBatchSize" : 200,
+            "maxIterTimes" : 512,
+            "maxPreemptCount" : 0,
+            "supportSelectBatch" : false,
+            "maxQueueDelayMicroseconds" : 5000
+        }
+    }
+}
+```
+
+gsm8k_benchmark 测试结果
+
+```
+[2025-03-17 17:32:16.757+08:00] [12089] [281473357974080] [benchmark] [INFO] [output.py:115]
+The BenchMark test performance metric result is:
++---------------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+------+
+|              Metric |         average |             max |             min |             P75 |             P90 |         SLO_P90 |             P99 |    N |
++---------------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+------+
+|      FirstTokenTime |      64.7768 ms |     848.3901 ms |      49.9074 ms |      69.1345 ms |       74.367 ms |       74.367 ms |      93.7642 ms | 8792 |
+|          DecodeTime |      27.0037 ms |     788.9588 ms |       0.0176 ms |      27.0996 ms |      28.3229 ms |      27.6082 ms |      63.7563 ms | 8792 |
+|      LastDecodeTime |      27.5678 ms |     101.4566 ms |            0 ms |      28.0333 ms |      29.2665 ms |      29.2665 ms |      63.0869 ms | 8792 |
+|       MaxDecodeTime |      81.6564 ms |     788.9588 ms |      28.2619 ms |      83.5511 ms |      99.0384 ms |      99.0384 ms |     172.0248 ms | 8792 |
+|        GenerateTime |   12176.1428 ms |    15100.317 ms |      53.4904 ms |   13929.2935 ms |    14138.473 ms |    14138.473 ms |   14394.8389 ms | 8792 |
+|         InputTokens |         59.8964 |             212 |              12 |            71.0 |            89.0 |            89.0 |           128.0 | 8792 |
+|     GeneratedTokens |        449.2916 |             512 |               1 |           512.0 |           512.0 |           512.0 |           512.0 | 8792 |
+| GeneratedTokenSpeed | 36.7786 token/s | 40.9125 token/s | 11.9284 token/s | 37.3645 token/s | 37.5995 token/s | 37.5995 token/s | 38.0678 token/s | 8792 |
+| GeneratedCharacters |       1492.5876 |            4086 |               0 |          1779.0 |          1930.9 |          1930.9 |         2179.09 | 8792 |
+|           Tokenizer |       1.1126 ms |      14.7884 ms |       0.2434 ms |       1.3033 ms |        1.662 ms |        1.662 ms |       2.8289 ms | 8792 |
+|         Detokenizer |       4.3607 ms |      13.1407 ms |       0.0107 ms |       4.9663 ms |       4.9882 ms |       4.9882 ms |       5.0328 ms | 8792 |
+|  CharactersPerToken |          3.3221 |               / |               / |               / |               / |               / |               / | 8792 |
+|  PostProcessingTime |            0 ms |            0 ms |            0 ms |            0 ms |            0 ms |            0 ms |            0 ms | 8792 |
+|         ForwardTime |            0 ms |            0 ms |            0 ms |            0 ms |            0 ms |            0 ms |            0 ms | 8792 |
+|    PrefillBatchsize |          1.0258 |              10 |               1 |             1.0 |             1.0 |             1.0 |             2.0 | 8792 |
+|    DecoderBatchsize |          9.9792 |              20 |               1 |            10.0 |            10.0 |               / |            10.0 | 8792 |
+|       QueueWaitTime |     893.4933 μs |       175689 μs |           18 μs |         92.0 μs |        114.0 μs |            / μs |      37317.0 μs | 8792 |
++---------------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+------+
+[2025-03-17 17:32:16.758+08:00] [12089] [281473357974080] [benchmark] [INFO] [output.py:121]
+The BenchMark test common metric result is:
++------------------------+--------------------------------------+
+|          Common Metric |                                Value |
++------------------------+--------------------------------------+
+|            CurrentTime |                  2025-03-17 17:32:16 |
+|            TimeElapsed |                         10714.4325 s |
+|             DataSource | /weights/qwq32b_mindie/QwQ-32B/gsm8k |
+|                 Failed |                            0( 0.0% ) |
+|               Returned |                       8792( 100.0% ) |
+|                  Total |                       8792[ 100.0% ] |
+|            Concurrency |                                   10 |
+|              ModelName |                              QwQ-32B |
+|                   lpct |                            1.0815 ms |
+|             Throughput |                         0.8206 req/s |
+|          GenerateSpeed |                     368.6777 token/s |
+| GenerateSpeedPerClient |                      36.8678 token/s |
+|               accuracy |                                    / |
++------------------------+--------------------------------------+
+```
+

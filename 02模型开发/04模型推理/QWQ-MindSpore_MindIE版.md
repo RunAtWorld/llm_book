@@ -138,8 +138,29 @@ tail -f output.log
 
 ### 3. 执行推理请求测试
 执行以下命令发送流式推理请求进行测试：
+
+- 测试triton流式推理接口
 ```bash
 curl -w "\ntime_total=%{time_total}\n" -H "Accept: application/json" -H "Content-type: application/json" -X POST -d '{"inputs": "请介绍一个北京的景点", "parameters": {"do_sample": false, "max_new_tokens": 128}, "stream": false}' http://127.0.0.1:1025/generate_stream
+```
+
+- 测试OpenAI 接口
+```shell
+curl -X POST 127.0.0.1:1025/v1/chat/completions \
+  -d "{
+    \"messages\": [
+        {\"role\": \"system\", \"content\": \"you are a helpful assistant.\"},
+        {\"role\": \"user\", \"content\": \"How many r's are in the word \\\"strawberry\\\"\"}
+    ],
+    \"max_tokens\": 32768,
+    \"stream\": false,
+    \"do_sample\": true,
+    \"repetition_penalty\": 1.00,
+    \"temperature\": 0.6,
+    \"top_p\": 0.95,
+    \"top_k\": 20,
+    \"model\": \"QwQ-32B\"
+  }"
 ```
 
 ## 性能测试
@@ -389,10 +410,12 @@ mindIE配置
             "templateType": "Standard",
             "templateName" : "Standard_LLM",
             "cacheBlockSize" : 16,
+            
             "maxPrefillBatchSize": 1,
             "maxPrefillTokens": 8192,
             "prefillTimeMsPerReq" : 150,
             "prefillPolicyType" : 0,
+            
             "decodeTimeMsPerReq" : 50,
             "decodePolicyType" : 0,
             "maxBatchSize" : 1,
