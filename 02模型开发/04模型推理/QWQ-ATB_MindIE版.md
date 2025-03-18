@@ -159,6 +159,12 @@ cd /usr/local/Ascend/mindie/latest/mindie-service/bin
 nohup ./mindieservice_daemon > /root/service.log 2>&1 &
 ```
 
+终止后台进程
+```
+pkill -9 mind
+pkill -9 python
+```
+
 - 测试OpenAI 接口
 
 ```shell
