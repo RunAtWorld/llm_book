@@ -167,7 +167,7 @@ curl -X POST 127.0.0.1:1025/v1/chat/completions \
 > 参考 [性能测试](https://www.hiascend.com/document/detail/zh/mindie/100/mindieservice/servicedev/mindie_service0012.html)
 > [pip依赖参考](https://www.hiascend.com/document/detail/zh/mindie/100/envdeployment/instg/mindie_instg_0023.html)
 
-### 4卡B3 gsm8k测试结果
+### 4卡B3 gsm8k测试
 
 为了减少测试时间，这里抽取gsm8k的前200条数据测试。
 ```
@@ -185,8 +185,8 @@ benchmark \
 --Concurrency 10 \
 --DoSampling False \
 --MaxOutputLen 512 \
- > /home/work/QwQ-32B/gsm8k/mindspore_mindie_gsm8k_benchmark-200.log 2>&1 &
-tail -f /home/work/QwQ-32B/gsm8k/mindspore_mindie_gsm8k_benchmark-200.log
+ > /home/work/QwQ-32B/gsm8k-200/mindspore_mindie_gsm8k_benchmark-200.log 2>&1 &
+tail -f /home/work/QwQ-32B/gsm8k-200/mindspore_mindie_gsm8k_benchmark-200.log
 ```
 
 模型配置
@@ -322,13 +322,13 @@ mindIE配置
 
 ```
 {
-    "Version" : "1.0.0",
+    "Version" : "1.1.0",
     "LogConfig" :
     {
         "logLevel" : "Info",
         "logFileSize" : 20,
         "logFileNum" : 20,
-        "logPath" : "logs/mindie-server.log"
+        "logPath" : "logs/mindservice.log"
     },
 
     "ServerConfig" :
@@ -399,7 +399,7 @@ mindIE配置
                     "modelWeightPath": "/home/work/QwQ-32B",
                     "worldSize": 4,
                     "cpuMemSize" : 5,
-                    "npuMemSize": 8,
+                    "npuMemSize": 35,
                     "backendType": "ms",
                     "trustRemoteCode" : false
                 }
@@ -410,16 +410,17 @@ mindIE配置
         {
             "templateType": "Standard",
             "templateName" : "Standard_LLM",
-            "cacheBlockSize" : 16,
-            
-            "maxPrefillBatchSize": 1,
+            "cacheBlockSize" : 128,
+
+            "maxPrefillBatchSize": 50,
             "maxPrefillTokens": 8192,
             "prefillTimeMsPerReq" : 150,
             "prefillPolicyType" : 0,
-            
+
             "decodeTimeMsPerReq" : 50,
             "decodePolicyType" : 0,
-            "maxBatchSize" : 1,
+
+            "maxBatchSize" : 200,
             "maxIterTimes": 512,
             "maxPreemptCount": 0,
             "supportSelectBatch": false,
@@ -432,29 +433,59 @@ mindIE配置
 gsm8k_benchmark 测试结果
 
 ```
-[2025-03-15 15:14:28.658+00:00] [18521] [281473289023520] [benchmark] [INFO] [output.py:114]
+[2025-03-18 11:42:57.065+00:00] [35602] [281473348116512] [benchmark] [INFO] [output.py:114]
 The BenchMark test performance metric result is:
-+---------------------+----------------+-----------------+----------------+----------------+----------------+----------------+----------------+------+
-|              Metric |        average |             max |            min |            P75 |            P90 |        SLO_P90 |            P99 |    N |
-+---------------------+----------------+-----------------+----------------+----------------+----------------+----------------+----------------+------+
-|      FirstTokenTime |     88.1944 ms |     798.5878 ms |     58.7664 ms |     94.6069 ms |    101.4279 ms |    101.4279 ms |    117.7145 ms | 8792 |
-|          DecodeTime |    264.9084 ms |  221952.7402 ms |       0.011 ms |     26.7239 ms |     28.9207 ms |    473.2623 ms |     48.6279 ms | 8792 |
-|      LastDecodeTime |      27.154 ms |      60.4694 ms |           0 ms |     27.6552 ms |     29.8138 ms |     29.8138 ms |      47.966 ms | 8792 |
-|       MaxDecodeTime |  107179.843 ms |  221952.7402 ms |  64154.0973 ms | 114097.2967 ms | 119005.0737 ms | 119005.0737 ms | 125618.2632 ms | 8792 |
-|        GenerateTime | 118536.9295 ms |  235183.5744 ms |     69.5162 ms | 126327.1709 ms | 131720.5082 ms | 131720.5082 ms | 138796.4644 ms | 8792 |
-|         InputTokens |        59.8964 |             212 |             12 |           71.0 |           89.0 |           89.0 |          128.0 | 8792 |
-|     GeneratedTokens |       448.1056 |             512 |              1 |          512.0 |          512.0 |          512.0 |          512.0 | 8792 |
-| GeneratedTokenSpeed | 3.8218 token/s | 14.3851 token/s | 0.3871 token/s | 4.3693 token/s | 4.6785 token/s | 4.6785 token/s |  5.501 token/s | 8792 |
-| GeneratedCharacters |      1510.9037 |            2545 |              0 |        1816.25 |         1967.0 |         1967.0 |         2213.0 | 8792 |
-|           Tokenizer |      2.3106 ms |       11.507 ms |      0.7014 ms |      2.6737 ms |       3.729 ms |       3.729 ms |      6.4025 ms | 8792 |
-|         Detokenizer |      1.0502 ms |       4.0472 ms |       0.015 ms |      1.2019 ms |      1.2228 ms |      1.2228 ms |      1.2856 ms | 8792 |
-|  CharactersPerToken |         3.3718 |               / |              / |              / |              / |              / |              / | 8792 |
-|  PostProcessingTime |           0 ms |            0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms | 8792 |
-|         ForwardTime |           0 ms |            0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms | 8792 |
-|    PrefillBatchsize |            1.0 |               1 |              1 |            1.0 |            1.0 |            1.0 |            1.0 | 8792 |
-|    DecoderBatchsize |            1.0 |               1 |              1 |            1.0 |            1.0 |              / |            1.0 | 8792 |
-|       QueueWaitTime | 238119.3935 μs |    221922274 μs |          10 μs |        55.0 μs |        65.0 μs |           / μs |       142.0 μs | 8792 |
-+---------------------+----------------+-----------------+----------------+----------------+----------------+----------------+----------------+------+
++---------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+-----+
+|              Metric |        average |            max |            min |            P75 |            P90 |        SLO_P90 |            P99 |   N |
++---------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+-----+
+|      FirstTokenTime |    106.8642 ms |    766.6764 ms |     61.2204 ms |     89.4486 ms |     96.8093 ms |     96.8093 ms |    678.2679 ms | 200 |
+|          DecodeTime |    272.8685 ms | 240991.5447 ms |     18.9562 ms |       26.88 ms |     29.1581 ms |    507.8787 ms |     44.7554 ms | 200 |
+|      LastDecodeTime |     27.3458 ms |     44.6792 ms |     23.6018 ms |     28.1029 ms |      30.421 ms |      30.421 ms |     43.4848 ms | 200 |
+|       MaxDecodeTime |  110540.058 ms | 240991.5447 ms |  87634.1462 ms | 113301.1768 ms | 119612.0382 ms | 119612.0382 ms | 215188.2593 ms | 200 |
+|        GenerateTime | 122445.6956 ms | 254751.9505 ms |  93431.3636 ms | 125816.2365 ms | 131786.2445 ms | 131786.2445 ms | 228628.2242 ms | 200 |
+|         InputTokens |          60.89 |            139 |             25 |           71.0 |           87.2 |           87.2 |         110.05 | 200 |
+|     GeneratedTokens |         449.32 |            512 |             70 |          512.0 |          512.0 |          512.0 |          512.0 | 200 |
+| GeneratedTokenSpeed | 3.7201 token/s | 4.9928 token/s | 0.5706 token/s | 4.3837 token/s | 4.6082 token/s | 4.6082 token/s | 4.9746 token/s | 200 |
+| GeneratedCharacters |       1523.965 |           2367 |            258 |         1832.0 |         1952.0 |         1952.0 |        2154.05 | 200 |
+|           Tokenizer |      3.0427 ms |      8.4531 ms |      0.8283 ms |      3.8697 ms |       4.942 ms |       4.942 ms |       6.854 ms | 200 |
+|         Detokenizer |      1.0629 ms |      1.3137 ms |      0.2007 ms |      1.2119 ms |      1.2252 ms |      1.2252 ms |      1.2969 ms | 200 |
+|  CharactersPerToken |         3.3917 |              / |              / |              / |              / |              / |              / | 200 |
+|  PostProcessingTime |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms | 200 |
+|         ForwardTime |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms | 200 |
+|    PrefillBatchsize |            1.0 |              1 |              1 |            1.0 |            1.0 |            1.0 |            1.0 | 200 |
+|    DecoderBatchsize |            1.0 |              1 |              1 |            1.0 |            1.0 |              / |            1.0 | 200 |
+|       QueueWaitTime | 246183.0655 μs |   240956110 μs |          11 μs |        46.0 μs |        57.0 μs |           / μs |       92.37 μs | 200 |
++---------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+-----+
+[2025-03-18 11:42:57.066+00:00] [35602] [281473348116512] [benchmark] [INFO] [output.py:120]
+The BenchMark test common metric result is:
++------------------------+------------------------------+
+|          Common Metric |                        Value |
++------------------------+------------------------------+
+|            CurrentTime |          2025-03-18 11:42:57 |
+|            TimeElapsed |                  2502.9557 s |
+|             DataSource | /home/work/QwQ-32B/gsm8k-200 |
+|                 Failed |                    0( 0.0% ) |
+|               Returned |                200( 100.0% ) |
+|                  Total |                200[ 100.0% ] |
+|            Concurrency |                           10 |
+|              ModelName |                      QwQ-32B |
+|                   lpct |                     1.755 ms |
+|             Throughput |                 0.0799 req/s |
+|          GenerateSpeed |              35.9032 token/s |
+| GenerateSpeedPerClient |               3.5903 token/s |
+|               accuracy |                            / |
++------------------------+------------------------------+
+Benchmark task completed successfully!
+```
+
+### 性能调优
+
+
+#### 测试0：4卡，"npuMemSize": 8，"maxPrefillBatchSize": 1
+* "maxPrefillBatchSize": 1
+* "npuMemSize": 8
+
+```
 [2025-03-15 15:14:28.660+00:00] [18521] [281473289023520] [benchmark] [INFO] [output.py:120]
 The BenchMark test common metric result is:
 +------------------------+--------------------------+
@@ -475,3 +506,146 @@ The BenchMark test common metric result is:
 |               accuracy |                        / |
 +------------------------+--------------------------+
 ```
+
+以上结果性能较差，检查后发现，"npuMemSize": 8 比较低，内存没有占满。调整 "npuMemSize": 35
+
+#### 调优1：4卡，"npuMemSize": 35，"maxPrefillBatchSize": 1
+* "maxPrefillBatchSize": 1
+* "npuMemSize": 35
+
+```
+[2025-03-18 11:42:57.065+00:00] [35602] [281473348116512] [benchmark] [INFO] [output.py:114]
+The BenchMark test performance metric result is:
++---------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+-----+
+|              Metric |        average |            max |            min |            P75 |            P90 |        SLO_P90 |            P99 |   N |
++---------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+-----+
+|      FirstTokenTime |    106.8642 ms |    766.6764 ms |     61.2204 ms |     89.4486 ms |     96.8093 ms |     96.8093 ms |    678.2679 ms | 200 |
+|          DecodeTime |    272.8685 ms | 240991.5447 ms |     18.9562 ms |       26.88 ms |     29.1581 ms |    507.8787 ms |     44.7554 ms | 200 |
+|      LastDecodeTime |     27.3458 ms |     44.6792 ms |     23.6018 ms |     28.1029 ms |      30.421 ms |      30.421 ms |     43.4848 ms | 200 |
+|       MaxDecodeTime |  110540.058 ms | 240991.5447 ms |  87634.1462 ms | 113301.1768 ms | 119612.0382 ms | 119612.0382 ms | 215188.2593 ms | 200 |
+|        GenerateTime | 122445.6956 ms | 254751.9505 ms |  93431.3636 ms | 125816.2365 ms | 131786.2445 ms | 131786.2445 ms | 228628.2242 ms | 200 |
+|         InputTokens |          60.89 |            139 |             25 |           71.0 |           87.2 |           87.2 |         110.05 | 200 |
+|     GeneratedTokens |         449.32 |            512 |             70 |          512.0 |          512.0 |          512.0 |          512.0 | 200 |
+| GeneratedTokenSpeed | 3.7201 token/s | 4.9928 token/s | 0.5706 token/s | 4.3837 token/s | 4.6082 token/s | 4.6082 token/s | 4.9746 token/s | 200 |
+| GeneratedCharacters |       1523.965 |           2367 |            258 |         1832.0 |         1952.0 |         1952.0 |        2154.05 | 200 |
+|           Tokenizer |      3.0427 ms |      8.4531 ms |      0.8283 ms |      3.8697 ms |       4.942 ms |       4.942 ms |       6.854 ms | 200 |
+|         Detokenizer |      1.0629 ms |      1.3137 ms |      0.2007 ms |      1.2119 ms |      1.2252 ms |      1.2252 ms |      1.2969 ms | 200 |
+|  CharactersPerToken |         3.3917 |              / |              / |              / |              / |              / |              / | 200 |
+|  PostProcessingTime |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms | 200 |
+|         ForwardTime |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms |           0 ms | 200 |
+|    PrefillBatchsize |            1.0 |              1 |              1 |            1.0 |            1.0 |            1.0 |            1.0 | 200 |
+|    DecoderBatchsize |            1.0 |              1 |              1 |            1.0 |            1.0 |              / |            1.0 | 200 |
+|       QueueWaitTime | 246183.0655 μs |   240956110 μs |          11 μs |        46.0 μs |        57.0 μs |           / μs |       92.37 μs | 200 |
++---------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+-----+
+[2025-03-18 11:42:57.066+00:00] [35602] [281473348116512] [benchmark] [INFO] [output.py:120]
+The BenchMark test common metric result is:
++------------------------+------------------------------+
+|          Common Metric |                        Value |
++------------------------+------------------------------+
+|            CurrentTime |          2025-03-18 11:42:57 |
+|            TimeElapsed |                  2502.9557 s |
+|             DataSource | /home/work/QwQ-32B/gsm8k-200 |
+|                 Failed |                    0( 0.0% ) |
+|               Returned |                200( 100.0% ) |
+|                  Total |                200[ 100.0% ] |
+|            Concurrency |                           10 |
+|              ModelName |                      QwQ-32B |
+|                   lpct |                     1.755 ms |
+|             Throughput |                 0.0799 req/s |
+|          GenerateSpeed |              35.9032 token/s |
+| GenerateSpeedPerClient |               3.5903 token/s |
+|               accuracy |                            / |
++------------------------+------------------------------+
+Benchmark task completed successfully!
+```
+
+发现性能基本无提升。将"maxPrefillBatchSize"设为 50
+
+#### 测试2：4卡，"npuMemSize": 35，"maxPrefillBatchSize": 50
+
+* "maxPrefillBatchSize": 50
+* "npuMemSize": 35
+
+启动命令改为
+```
+cd /home/work/mindformers/scripts && bash run_mindie.sh --model-name QwQ-32B --model-path /home/work/QwQ-32B --max-prefill-batch-size 50
+```
+
+```
+[2025-03-19 08:29:17.778+00:00] [27897] [281473619693600] [benchmark] [INFO] [output.py:114]
+The BenchMark test performance metric result is:
++---------------------+-----------------+-----------------+-----------------+-----------------+----------------+----------------+-----------------+-----+
+|              Metric |         average |             max |             min |             P75 |            P90 |        SLO_P90 |             P99 |   N |
++---------------------+-----------------+-----------------+-----------------+-----------------+----------------+----------------+-----------------+-----+
+|      FirstTokenTime |        97.07 ms |          169 ms |           62 ms |        110.0 ms |       130.1 ms |       130.1 ms |       164.02 ms | 200 |
+|          DecodeTime |      29.1162 ms |          212 ms |           24 ms |         29.0 ms |        31.0 ms |     29.9204 ms |         50.0 ms | 200 |
+|      LastDecodeTime |       30.005 ms |           99 ms |           26 ms |         30.0 ms |        32.0 ms |        32.0 ms |        90.07 ms | 200 |
+|       MaxDecodeTime |       110.82 ms |          212 ms |           42 ms |        123.0 ms |       130.0 ms |       130.0 ms |       184.15 ms | 200 |
+|        GenerateTime |    14356.007 ms |     16303.02 ms |     2164.943 ms |   15433.3689 ms |  15628.6762 ms |  15628.6762 ms |   16297.7436 ms | 200 |
+|         InputTokens |           60.89 |             139 |              25 |            71.0 |           87.2 |           87.2 |          110.05 | 200 |
+|     GeneratedTokens |          482.07 |             512 |              70 |           512.0 |          512.0 |          512.0 |           512.0 | 200 |
+| GeneratedTokenSpeed | 33.5801 token/s | 34.9831 token/s | 31.4052 token/s | 34.3461 token/s | 34.453 token/s | 34.453 token/s | 34.7207 token/s | 200 |
+| GeneratedCharacters |         1649.17 |            2309 |             258 |         1853.25 |         1979.5 |         1979.5 |         2284.18 | 200 |
+|           Tokenizer |       2.4258 ms |       7.7391 ms |       0.7679 ms |       2.7465 ms |       3.667 ms |       3.667 ms |       7.4379 ms | 200 |
+|         Detokenizer |       1.1688 ms |       2.1422 ms |       0.2027 ms |       1.2372 ms |      1.2781 ms |      1.2781 ms |       1.4362 ms | 200 |
+|  CharactersPerToken |           3.421 |               / |               / |               / |              / |              / |               / | 200 |
+|  PostProcessingTime |            0 ms |            0 ms |            0 ms |            0 ms |           0 ms |           0 ms |            0 ms | 200 |
+|         ForwardTime |            0 ms |            0 ms |            0 ms |            0 ms |           0 ms |           0 ms |            0 ms | 200 |
+|    PrefillBatchsize |          1.8519 |               9 |               1 |            1.25 |            5.0 |            5.0 |            7.93 | 200 |
+|    DecoderBatchsize |          9.7255 |              10 |               1 |            10.0 |           10.0 |              / |            10.0 | 200 |
+|       QueueWaitTime |     601.6063 μs |       170470 μs |           15 μs |         88.0 μs |       109.0 μs |           / μs |     24682.83 μs | 200 |
++---------------------+-----------------+-----------------+-----------------+-----------------+----------------+----------------+-----------------+-----+
+[2025-03-19 08:29:17.779+00:00] [27897] [281473619693600] [benchmark] [INFO] [output.py:120]
+The BenchMark test common metric result is:
++------------------------+------------------------------+
+|          Common Metric |                        Value |
++------------------------+------------------------------+
+|            CurrentTime |          2025-03-19 08:29:17 |
+|            TimeElapsed |                   294.5528 s |
+|             DataSource | /home/work/QwQ-32B/gsm8k-200 |
+|                 Failed |                    0( 0.0% ) |
+|               Returned |                200( 100.0% ) |
+|                  Total |                200[ 100.0% ] |
+|            Concurrency |                           10 |
+|              ModelName |                      QwQ-32B |
+|                   lpct |                    1.5942 ms |
+|             Throughput |                  0.679 req/s |
+|          GenerateSpeed |             327.3233 token/s |
+| GenerateSpeedPerClient |              32.7323 token/s |
+|               accuracy |                            / |
++------------------------+------------------------------+
+```
+
+> 注意：原先的版本，把"maxPrefillBatchSize"设置超过1，启动mindie就会报错：
+>
+> scheduleParam.maxPrefillBatchSize [2] is out of bound [1]
+> ERR: Failed to init endpoint! Please check the service log or console output.
+>
+> 需要更换mindie为 1.0.0版本，且需要修改mindie源码。详细方法参考FAQ
+
+## FAQ
+
+#### 一、更换mindie版本为1.0.0，并修改mindie源码
+
+1. 下载 mindie [安装包](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/MindIE/MindIE%201.0.0/Ascend-mindie_1.0.0_linux-aarch64.run?response-content-type=application/octet-stream)，安装参考[文档](https://www.hiascend.com/document/detail/zh/mindie/100/envdeployment/instg/mindie_instg_0019.html)
+
+2. 安装后mindie后，修改  `/usr/local/lib/python3.10/dist-packages/mindie_llm/modeling/model_wrapper/ms/mf_model_wrapper.py`两处源码：
+
+   第1处：注释掉disable_custom_fa的异常
+
+   ```
+    41 #        try:
+    42 #            from mindformers.tools.utils import get_disable_custom_fa
+    43 #            self.disable_custom_fa = get_disable_custom_fa()
+    44 #        except ImportError:
+    45 #            pass
+   ```
+
+   第2处：注释掉self.disable_custom_fa分支
+
+   ```
+    74         #if model_inputs.is_prefill and self.disable_custom_fa:
+    75         if model_inputs.is_prefill:
+   ```
+
+   > 如果mindie_llm的安装目录不在/usr/local/lib/python3.10/dist-packages， 查询mindie_llm的安装位置：pip show mindie_llm

@@ -4,10 +4,11 @@
 
 安装过程
 ```
-chmod +x 软件包名.run
+chmod +x Ascend-mindie_1.0.0_linux-aarch64.run
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-./软件包名.run --check
-./软件包名.run --install --quiet
+./Ascend-mindie_1.0.0_linux-aarch64.run --check
+./Ascend-mindie_1.0.0_linux-aarch64.run --install --quiet
+source /usr/local/Ascend/mindie/set_env.sh
 ```
 
 配置环境变量
