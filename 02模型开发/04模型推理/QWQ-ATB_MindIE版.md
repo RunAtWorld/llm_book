@@ -208,11 +208,11 @@ curl -X POST 127.0.0.1:1040/v1/chat/completions \
 > 参考 [性能测试](https://www.hiascend.com/document/detail/zh/mindie/100/mindieservice/servicedev/mindie_service0012.html)
 
 ### 4卡B3 gsm8k测试结果
-
+为了减少测试时间，这里抽取gsm8k的前200条数据测试。
 ```
 export MINDIE_LOG_TO_STDOUT="benchmark:1; client:1"
 nohup benchmark \
---DatasetPath "/weights/qwq32b_mindie/QwQ-32B/gsm8k" \
+--DatasetPath "/weights/qwq32b_mindie/QwQ-32B/gsm8k-200" \
 --DatasetType "gsm8k" \
 --ModelName "QwQ-32B" \
 --ModelPath "/weights/qwq32b_mindie/QwQ-32B" \
@@ -221,8 +221,8 @@ nohup benchmark \
 --ManagementHttp http://127.0.0.2:1041 \
 --Concurrency 10 \
 --DoSampling False \
---MaxOutputLen 512 > /weights/qwq32b_mindie/QwQ-32B/atb_mindie_gsm8k_benchmark.log 2>&1 &
-tail -f /weights/qwq32b_mindie/QwQ-32B/atb_mindie_gsm8k_benchmark.log
+--MaxOutputLen 512 > /weights/qwq32b_mindie/QwQ-32B/atb_mindie_gsm8k_benchmark-200.log 2>&1 &
+tail -f /weights/qwq32b_mindie/QwQ-32B/atb_mindie_gsm8k_benchmark-200.log
 ```
 
 mindIE配置

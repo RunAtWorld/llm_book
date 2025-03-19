@@ -169,12 +169,13 @@ curl -X POST 127.0.0.1:1025/v1/chat/completions \
 
 ### 4卡B3 gsm8k测试结果
 
+为了减少测试时间，这里抽取gsm8k的前200条数据测试。
 ```
 export MINDIE_LOG_TO_STDOUT="benchmark:1; client:1"
 cd /home/work/mindformers
 nohup \
 benchmark \
---DatasetPath "/home/work/QwQ-32B/gsm8k" \
+--DatasetPath "/home/work/QwQ-32B/gsm8k-200" \
 --DatasetType "gsm8k" \
 --ModelName "QwQ-32B" \
 --ModelPath "/home/work/QwQ-32B" \
@@ -184,8 +185,8 @@ benchmark \
 --Concurrency 10 \
 --DoSampling False \
 --MaxOutputLen 512 \
- > /home/work/QwQ-32B/gsm8k/mindspore_mindie_gsm8k_benchmark.log 2>&1 &
-tail -f /home/work/QwQ-32B/gsm8k/mindspore_mindie_gsm8k_benchmark.log
+ > /home/work/QwQ-32B/gsm8k/mindspore_mindie_gsm8k_benchmark-200.log 2>&1 &
+tail -f /home/work/QwQ-32B/gsm8k/mindspore_mindie_gsm8k_benchmark-200.log
 ```
 
 模型配置
