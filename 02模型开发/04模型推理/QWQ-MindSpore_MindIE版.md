@@ -649,3 +649,12 @@ The BenchMark test common metric result is:
    ```
 
    > 如果mindie_llm的安装目录不在/usr/local/lib/python3.10/dist-packages， 查询mindie_llm的安装位置：pip show mindie_llm
+
+#### 二、MA平台使用mindie后，无法启动：daemon killed
+
+  需要添加环境变量  
+
+  ```
+  export MINDIE_LLM_FRAMEWORK_BACKEND=MS 
+  ```
+
