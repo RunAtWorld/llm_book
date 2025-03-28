@@ -2,11 +2,6 @@
 
 > [QwQ-32B MindSpore版本下载](https://modelers.cn/models/MindSpore-Lab/QwQ-32B)
 
-## 目录
-- [模型介绍](#模型介绍)
-- [快速开始](#快速开始)
-- [声明](#声明)
-
 ## 模型介绍
 QwQ-32B是千问于2025年3月6日发布的人工智能大型语言模型。这是一款拥有 320 亿参数的模型，其性能可与具备 6710 亿参数（其中 370 亿被激活）的 DeepSeek-R1 媲美。这一成果突显了将强化学习应用于经过大规模预训练的强大基础模型的有效性。QwQ-32B 在一系列基准测试中进行了评估，测试了数学推理、编程能力和通用能力。以下结果展示了 QwQ-32B 与其他领先模型的性能对比，包括 DeepSeek-R1、OpenAI-o1-mini、DeepSeek-R1-Distilled-Llama-70B和DeepSeek-R1-Distilled-Qwen-32B。
 ![](https://modelscope.cn/api/v1/models/Qwen/QwQ-32B/repo?Revision=master&FilePath=figures%2Fbenchmark.jpg&View=true)
@@ -19,8 +14,8 @@ QwQ-32B是千问于2025年3月6日发布的人工智能大型语言模型。这�
 ## 快速开始
 QwQ-32B推理至少需要1台（2卡）Atlas 800T A2（64G）服务器服务器（基于BF16权重）。昇思MindSpore提供了QwQ-32B推理可用的Docker容器镜像，供开发者快速体验。
 
-### 下载昇思 MindSpore 推理容器镜像
-执行以下 Shell 命令，拉取昇思 MindSpore 推理容器镜像（复用DeepSeek-V3的镜像）：
+### 下载MindSpore 推理容器镜像
+执行以下命令，拉取昇思 MindSpore 推理容器镜像（复用DeepSeek-V3的镜像）：
 ```bash
 docker pull swr.cn-central-221.ovaijisuan.com/mindformers/deepseek_v3_mindspore2.5.0-infer:20250217
 ```
@@ -711,6 +706,32 @@ there is an aivec error exception.
 
 **解决过程：**
 
+通过走读[MindFormer的源码qwen2_5_tokenizer.py](https://gitee.com/mindspore/mindformers/blob/br_infer_deepseek_os/research/qwen2_5/qwen2_5_tokenizer.py) 和[魔乐社区qwen2_5_tokenizer.py](https://modelers.cn/models/MindSpore-Lab/QwQ-32B/blob/main/qwen2_5_tokenizer.py)发现，发现261行代码存在bug:
 
+```
+261         tool_response_start_token = AddedToken(
+262             FILESEP, lstrip=False, rstrip=False, special=True, normalized=False)
+263         tool_response_end_token = AddedToken(
+264             FILESEP, lstrip=False, rstrip=False, special=True, normalized=False)
+265         think_start_token = AddedToken(
+266             FILESEP, lstrip=False, rstrip=False, special=True, normalized=False)
+267         think_end_token = AddedToken(
+268             FILESEP, lstrip=False, rstrip=False, special=True, normalized=False)
+```
+
+经过与研发确认该bug，并提单跟踪。
 
 **解决方法：**
+
+将以上[魔乐社区qwen2_5_tokenizer.py](https://modelers.cn/models/MindSpore-Lab/QwQ-32B/blob/main/qwen2_5_tokenizer.py)代码修改为以下代码
+
+```
+261         tool_response_start_token = AddedToken(
+262             TOOLRESPONSESTART, lstrip=False, rstrip=False, special=True, normalized=False)
+263         tool_response_end_token = AddedToken(
+264             TOOLRESPONSEEND, lstrip=False, rstrip=False, special=True, normalized=False)
+265         think_start_token = AddedToken(
+266             THINKSTART, lstrip=False, rstrip=False, special=True, normalized=False)
+267         think_end_token = AddedToken(
+268             THINKEND, lstrip=False, rstrip=False, special=True, normalized=False)
+```
