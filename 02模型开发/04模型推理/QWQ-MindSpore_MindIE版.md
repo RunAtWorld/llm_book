@@ -164,10 +164,11 @@ curl -X POST 127.0.0.1:1025/v1/chat/completions \
 ```
 
 ## 性能测试
-> 参考 [性能测试](https://www.hiascend.com/document/detail/zh/mindie/100/mindieservice/servicedev/mindie_service0012.html)
-> [pip依赖参考](https://www.hiascend.com/document/detail/zh/mindie/100/envdeployment/instg/mindie_instg_0023.html)
+> 参考 [MindIE的性能测试说明](https://www.hiascend.com/document/detail/zh/mindie/100/mindieservice/servicedev/mindie_service0012.html)
+>
+> 由于官方仓库给的镜像中，没有benchmark的相关依赖，需要自己安装相关[pip依赖](https://www.hiascend.com/document/detail/zh/mindie/100/envdeployment/instg/mindie_instg_0023.html)
 
-### 4卡B3 gsm8k测试
+### 4卡B3 gsm8k第一次测试
 
 为了减少测试时间，这里抽取gsm8k的前200条数据测试。
 ```
@@ -480,10 +481,7 @@ Benchmark task completed successfully!
 
 ### 性能调优
 
-
-#### 测试0：4卡，"npuMemSize": 8，"maxPrefillBatchSize": 1
-* "maxPrefillBatchSize": 1
-* "npuMemSize": 8
+#### 第一次测试下性能较差
 
 ```
 [2025-03-15 15:14:28.660+00:00] [18521] [281473289023520] [benchmark] [INFO] [output.py:120]
@@ -507,10 +505,14 @@ The BenchMark test common metric result is:
 +------------------------+--------------------------+
 ```
 
-以上结果性能较差，检查后发现，"npuMemSize": 8 比较低，内存没有占满。调整 "npuMemSize": 35
+从第一次测试结果来看，性能较差，核心关注两个配置
 
-#### 调优1：4卡，"npuMemSize": 35，"maxPrefillBatchSize": 1
 * "maxPrefillBatchSize": 1
+* "npuMemSize": 8
+
+"npuMemSize": 8 比较低，内存没有占满。调整 "npuMemSize": 35
+
+#### 调优1：调整"npuMemSize"到 35
 * "npuMemSize": 35
 
 ```
@@ -558,10 +560,11 @@ The BenchMark test common metric result is:
 +------------------------+------------------------------+
 Benchmark task completed successfully!
 ```
+增大KV Cache内存后，发现性能基本无提升。怀疑"maxPrefillBatchSize"太小，将 "maxPrefillBatchSize" 设为 50
 
-发现性能基本无提升。将"maxPrefillBatchSize"设为 50
+#### 调优2："maxPrefillBatchSize": 50
 
-#### 测试2：4卡，"npuMemSize": 35，"maxPrefillBatchSize": 50
+增大"maxPrefillBatchSize" 到 50
 
 * "maxPrefillBatchSize": 50
 * "npuMemSize": 35
@@ -570,6 +573,14 @@ Benchmark task completed successfully!
 ```
 cd /home/work/mindformers/scripts && bash run_mindie.sh --model-name QwQ-32B --model-path /home/work/QwQ-32B --max-prefill-batch-size 50
 ```
+
+发现启动报错：
+```
+scheduleParam.maxPrefillBatchSize [50] is out of bound [1]
+```
+经过与研发确认，原因为该镜像中mindIE版本不支持maxPrefillBatchSize超过1，需要更换mindie为 1.0.0版本，且需要修改mindie源码。详细方法参考FAQ。
+
+修改后，测试结果如下
 
 ```
 [2025-03-19 08:29:17.778+00:00] [27897] [281473619693600] [benchmark] [INFO] [output.py:114]
@@ -616,16 +627,38 @@ The BenchMark test common metric result is:
 +------------------------+------------------------------+
 ```
 
-> 注意：原先的版本，把"maxPrefillBatchSize"设置超过1，启动mindie就会报错：
->
-> scheduleParam.maxPrefillBatchSize [2] is out of bound [1]
-> ERR: Failed to init endpoint! Please check the service log or console output.
->
-> 需要更换mindie为 1.0.0版本，且需要修改mindie源码。详细方法参考FAQ
-
 ## FAQ
 
 #### 一、更换mindie版本为1.0.0，并修改mindie源码
+**问题现象：**
+
+mindie服务启动报错
+
+```
+scheduleParam.maxPrefillBatchSize [50] is out of bound [1]
+```
+
+**解决过程：**
+
+最开始考虑是maxPrefillBatchSize设置太大，尝试用maxPrefillBatchSize=2启动，依然报错：
+
+```
+scheduleParam.maxPrefillBatchSize [2] is out of bound [1]
+```
+
+与开发进一步沟通，确认是该镜像中min dIE版本不支持maxPrefillBatchSize超过1，需要更换mindie为 1.0.0版本。
+
+更换mindie 1.0.0版本并安装后，启动报错为
+
+```
+Exception: Sync stream error!
+EZ9999: Inner Error!
+there is an aivec error exception.
+```
+
+经过与研发确认，需要进一步修改mindie安装后`mf_model_wrapper.py`的源码。修改后，服务正常启动。
+
+**解决方法：**
 
 1. 下载 mindie [安装包](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/MindIE/MindIE%201.0.0/Ascend-mindie_1.0.0_linux-aarch64.run?response-content-type=application/octet-stream)，安装参考[文档](https://www.hiascend.com/document/detail/zh/mindie/100/envdeployment/instg/mindie_instg_0019.html)
 
@@ -650,11 +683,34 @@ The BenchMark test common metric result is:
 
    > 如果mindie_llm的安装目录不在/usr/local/lib/python3.10/dist-packages， 查询mindie_llm的安装位置：pip show mindie_llm
 
-#### 二、MA平台使用mindie后，无法启动：daemon killed
+#### 二、MA平台使用mindie后，无法启动，报错：daemon killed
 
-  需要添加环境变量  
+**问题现象：**
+
+把镜像push到MA平台后，启动服务总是报错：daemon killed。但使用 `while true; do sleep 1; done` 定住容器后，进入容器内启动，可以正常启动。
+
+**解决过程：**
+
+经过反复研究启动脚本 run_mindie.sh，怀疑是进入容器后，自动触发了bash的 `.bashrc`文件中的一些环境变量。
+
+通过查看在MA上部署启动mindie-server启动日志，发现报错为缺少 torch_npu的pip包，这说明通过MA平台启动时，mindie自动走了ATB的后端。进一步验证了以上猜想。在 run_mindie.sh 增加 MINDIE_LLM_FRAMEWORK_BACKEND 环境变量后，启动正常。
+
+**解决方法：**
+
+在 run_mindie.sh 脚本中添加环境变量  
 
   ```
   export MINDIE_LLM_FRAMEWORK_BACKEND=MS 
   ```
 
+#### 三、请求响应中首个token是 `<|file_sep|>`而不是`<think>`或普通字符
+
+**问题现象：**
+
+调用mindIE兼容openAI接口 `/v1/chat/completions`后，发现请求响应中首个token是 `<|file_sep|>`而不是`<think>`或普通字符。
+
+**解决过程：**
+
+
+
+**解决方法：**
