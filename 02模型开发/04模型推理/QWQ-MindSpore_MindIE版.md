@@ -20,6 +20,17 @@ QwQ-32B推理至少需要1台（2卡）Atlas 800T A2（64G）服务器服务器�
 docker pull swr.cn-central-221.ovaijisuan.com/mindformers/deepseek_v3_mindspore2.5.0-infer:20250217
 ```
 
+各组件版本配套如下：
+
+| 组件       | 版本   |
+| :--------- | :----- |
+| MindFormers     | deepseek_v3_infer_v1.2分支  |
+| MindSpore     | 2.5.0  |
+| MindIE     | 1.0.T71  |
+| CANN       |  8.0.T63  |
+| HDK        | 24.1.rc2 |
+
+
 ### 启动容器
 执行以下命令创建并启动容器：
 ```bash
