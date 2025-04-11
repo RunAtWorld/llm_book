@@ -1048,3 +1048,22 @@ there is an aivec error exception.
 267         think_end_token = AddedToken(
 268             THINKEND, lstrip=False, rstrip=False, special=True, normalized=False)
 ```
+
+## 其他思考
+### 模型支持的最长序列和哪些因素有关?
+参考 [长序列特性介绍](https://www.hiascend.com/document/detail/zh/mindie/100/mindiellm/llmdev/mindie_llm0295.html),长序列定义为序列长度超过32K甚至可到达1M级别的文本。长序列特性的主要要求是在输入文本超长的场景下，模型回答的效果及性能也可以同时得到保障。在长序列场景下，由**Attention和KV Cache部分**造成的显存消耗会快速的成倍增长。因此对这部分显存的优化便是长序列特性的关键技术点。其中涉及到诸如KV Cache量化，kv多头压缩，训短推长等关键算法技术。
+
+强行增加序列长度到64K，则报错如下
+```
+EZ9999: Inner Error!
+EZ9999: [PID: 2168] 2025-04-11-07:47:24.603.424 The error from device(chipId:3, dieId:0), serial number is 2, there is an aivec error exception, core id is 22, error code = 0x800000, dump info: pc start: 0x12c0c019d560, current: 0x12c0c0194714, vec error info: 0xc308de2314, mte error info: 0x51031459c0, ifu error info: 0x1714a13144e80, ccu error info: 0xa00a45750817d3b0, cube error info: 0, biu error info: 0, aic error mask: 0x6500020bd00028c, para base: 0x12c100412000.[FUNC:ProcessStarsCoreErrorInfo][FILE:device_error_proc.cc][LINE:1417][THREAD:3463]
+        TraceBack (most recent call last):
+       The extend info: errcode:(0x800000, 0, 0) errorStr: The DDR address of the MTE instruction is out of range. fixp_error0 info: 0x31459c0, fixp_error1 info: 0x51 fsmId:0, tslot:1, thread:0, ctxid:0, blk:23, sublk:0, subErrType:4.[FUNC:ProcessStarsCoreErrorInfo][FILE:device_error_proc.cc][LINE:1429][THREAD:3463]
+
+    The error from device(chipId:3, dieId:0), serial number is 2, there is an aivec error exception, core id is 12, error code = 0x800000, dump info: pc start: 0x12c0c019d560, current: 0x12c0c0194714, vec error info: 0x7112f7423a, mte error info: 0x51031459c0, ifu error info: 0xf438331e0f40, ccu error info: 0xce7e0d8602810c90, cube error info: 0, biu error info: 0, aic error mask: 0x6500020bd00028c, para base: 0x12c100412000.[FUNC:ProcessStarsCoreErrorInfo][FILE:device_error_proc.cc][LINE:1417][THREAD:3463]
+    
+    The extend info: errcode:(0x800000, 0, 0) errorStr: The DDR address of the MTE instruction is out of range. fixp_error0 info: 0x314b9a4, fixp_error1 info: 0x57 fsmId:1, tslot:1, thread:0, ctxid:0, blk:9, sublk:0, subErrType:4.[FUNC:ProcessStarsCoreErrorInfo][FILE:device_error_proc.cc][LINE:1429][THREAD:7333]
+       
+    The error from device(chipId:1, dieId:0), serial number is 4, there is an aivec error exception, core id is 13, error code = 0x800000, dump info: pc start: 0x12c0c019d560, current: 0x12c0c0195ea4, vec error info: 0xe117ffaf80, mte error info: 0x570314a9a4, ifu error info: 0x7cffd73cadbc0, ccu error info: 0x1f405e207d59311f, cube error info: 0, biu error info: 0, aic error mask: 0x6500020bd00028c, para base: 0x12c100410800.[FUNC:ProcessStarsCoreErrorInfo][FILE:device_error_proc.cc][LINE:1417][THREAD:7333]
+```
+以上报错，说明瓶颈在aivec和mte的硬件或算子。通过多次实验，在不考虑KV Cache的情况，极限序列长度是55K。
