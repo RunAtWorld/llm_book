@@ -6,7 +6,7 @@
         ],
         "args": [
         "/K",
-        "D:\\miniconda3\\condabin\\activate.bat C:\\Users\\lpf\\.conda\\envs\\py310"
+        "D:\\anaconda3\\condabin\\activate.bat C:\\Users\\lpf\\.conda\\envs\\py310"
         ],
         "icon": "terminal-cmd",
         "color": "terminal.ansiGreen"
