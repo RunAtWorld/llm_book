@@ -4,6 +4,8 @@
 2. 昇腾镜像仓库：https://www.hiascend.com/developer/ascendhub
 3. MF镜像仓库：http://mirrors.cn-central-221.ovaijisuan.com/detail/154.html
 4. 制作MS容器参考： https://gitee.com/Maigee/create_docker
+5. 
+
 ## 常见查询方法
 1. 查看每张卡驱动的命令
 
@@ -14,7 +16,7 @@
 2. 查看pci中有几张昇腾卡
 ```
 lspci | grep d802  #910B
-lspci | grep d500  
+lspci | grep d500  #310P
 ```
 3. 允许两个容器占用同样的npu卡，启动容器时添加配置 --privileged=true。赋予容器额外权限，使其能够访问和使用宿主机的磁盘、驱动设备，加载内核模块，操作硬件资源。如果不加该选项，容器启动后，查询npu-smi info，会显示：
 DrvMngGetConsoleLogLevel failed. (g_conLogLevel=3)
@@ -52,15 +54,8 @@ dcmi model initialized failed, because the device is used. ret is -8020
     --device=/dev/devmm_svm \
     --device=/dev/hisi_hdc \
     -v /usr/local/Ascend/driver:/usr/local/Ascend/driver \
-    -v /usr/local/Ascend/add-ons/:/usr/local/Ascend/add-ons/ \
     -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi \
-    -v /usr/local/dcmi:/usr/local/dcmi \
     -v /usr/local/sbin/:/usr/local/sbin/ \
-    -v /var/log/npu/conf/slog/slog.conf:/var/log/npu/conf/slog/slog.conf \
-    -v /var/log/npu/slog/:/var/log/npu/slog \
-    -v /var/log/npu/profiling/:/var/log/npu/profiling \
-    -v /var/log/npu/dump/:/var/log/npu/dump \
-    -v /var/log/npu/:/usr/slog \
     -v /home/pae101/:/home/pae101/ \
     mf1.3_ma:0.4  \
     /bin/bash
