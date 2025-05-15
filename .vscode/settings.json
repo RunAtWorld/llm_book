@@ -1,0 +1,16 @@
+{
+    "terminal.integrated.profiles.windows": {
+        "Conda": {
+        "path": [
+        "${env:windir}\\System32\\cmd.exe"
+        ],
+        "args": [
+        "/K",
+        "D:\\anaconda3\\condabin\\activate.bat C:\\Users\\lpf\\.conda\\envs\\py310"
+        ],
+        "icon": "terminal-cmd",
+        "color": "terminal.ansiGreen"
+        }
+        },
+        "terminal.integrated.defaultProfile.windows": "Conda"
+}
