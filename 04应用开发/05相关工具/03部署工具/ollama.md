@@ -40,7 +40,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ## 启动
 
-启动Llama 3.2](https://ollama.com/library/llama3.2):
+启动[Llama 3.2](https://ollama.com/library/llama3.2):
 
 ```
 ollama run llama3.2
