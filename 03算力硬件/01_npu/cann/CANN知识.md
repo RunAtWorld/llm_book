@@ -14,7 +14,7 @@
 
 静默安装
 ```
-./Ascend-cann-toolkit_8.0.RC3_linux-aarch64.run --full --quiet --nox11
+./Ascend-cann-toolkit_8.0.RC3_linux-aarch64.run --install --quiet --nox11
 ```
 
 ### 安装 cann-kernels
@@ -24,7 +24,7 @@
 
 静默安装
 ```
-./Ascend-cann-kernels-310p_8.0.RC3_linux-aarch64.run --full --quiet --nox11
+./Ascend-cann-kernels-310p_8.0.RC3_linux-aarch64.run --install --quiet --nox11
 ```
 
 ## CANN目录下文件
