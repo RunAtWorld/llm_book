@@ -55,8 +55,38 @@ yum install docker
 cat > /etc/docker/daemon.json <<-EOF
 {
     "data-root": "/data/docker",
-    "registry-mirrors": [ "https://05092a8eb30025720fa9c01e8cefab80.mirror.swr.myhuaweicloud.com" ]
+    "registry-mirrors" : [
+        "https://05092a8eb30025720fa9c01e8cefab80.mirror.swr.myhuaweicloud.com",
+        "https://docker.registry.cyou",
+        "https://docker-cf.registry.cyou",
+        "https://dockercf.jsdelivr.fyi",
+        "https://docker.jsdelivr.fyi",
+        "https://dockertest.jsdelivr.fyi",
+        "https://mirror.aliyuncs.com",
+        "https://dockerproxy.com",
+        "https://mirror.baidubce.com",
+        "https://docker.m.daocloud.io",
+        "https://docker.nju.edu.cn",
+        "https://docker.mirrors.sjtug.sjtu.edu.cn",
+        "https://docker.mirrors.ustc.edu.cn",
+        "https://mirror.iscas.ac.cn",
+        "https://docker.rainbond.cc",
+        "https://do.nark.eu.org",
+        "https://dc.j8.work",
+        "https://dockerproxy.com",
+        "https://gst6rzl9.mirror.aliyuncs.com",
+        "https://registry.docker-cn.com",
+        "http://hub-mirror.c.163.com",
+        "http://mirrors.ustc.edu.cn/",
+        "https://mirrors.tuna.tsinghua.edu.cn/",
+        "http://mirrors.sohu.com/"
+    ],
+    "insecure-registries" : [
+        "registry.docker-cn.com",
+        "docker.mirrors.ustc.edu.cn"
+    ]
 }
 EOF
+systemctl reload docker
 systemctl restart docker
 docker info
