@@ -1,3 +1,4 @@
+
 ## 安装MindIE
 > 参考：[安装MindIE](https://www.hiascend.com/document/detail/zh/mindie/100/envdeployment/instg/mindie_instg_0019.html)
 
@@ -21,3 +22,7 @@ source /usr/local/Ascend/mindie/set_env.sh
     ```
     source /home/{当前用户名}/Ascend/mindie/set_env.sh
     ```
+
+## 看错误日志
+
+~/mindie/log/debug
