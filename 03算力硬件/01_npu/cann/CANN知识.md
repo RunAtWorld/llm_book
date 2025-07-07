@@ -1,5 +1,26 @@
 # 昇腾GANN
 
+## CANN镜像
+> 1. 昇腾镜像仓库 : https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884
+> 2. CANN镜像制作代码仓库: https://github.com/Ascend/cann-container-image
+
+创建容器：
+```
+# 假设您的NPU设备安装在/dev/davinci1上，并且您的NPU驱动程序安装在/usr/local/Ascend上：
+docker run \
+    --name cann_container \
+    --device /dev/davinci1 \
+    --device /dev/davinci_manager \
+    --device /dev/devmm_svm \
+    --device /dev/hisi_hdc \
+    -v /usr/local/dcmi:/usr/local/dcmi \
+    -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi \
+    -v /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/ \
+    -v /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info \
+    -v /etc/ascend_install.info:/etc/ascend_install.info \
+    -it ascend/cann:tag bash
+```
+
 ## CANN安装
 ```
 2.1G    Ascend-cann-kernels-310p_8.0.RC3_linux-aarch64.run
