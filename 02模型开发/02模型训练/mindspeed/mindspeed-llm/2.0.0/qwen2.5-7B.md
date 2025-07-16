@@ -1,5 +1,51 @@
 # Qwen2.5-7B适配
 
+
+## 依赖安装
+
+**pytorch后端相关依赖环境与mindspore环境互相冲突，请根据需要，择一安装。**
+
+### Pytorch后端相关依赖安装
+
+请参考MindSpeed-LLM仓首页[“版本配套表”](../README.md#版本配套表)，准备[torch_npu](https://www.hiascend.com/developer/download/community/result?module=pt)和[apex](https://gitee.com/ascend/apex)，参考[Ascend Extension for PyTorch](https://www.hiascend.com/document/detail/zh/Pytorch/700/configandinstg/instg/insg_0001.html)或执行以下命令安装
+
+```shell
+# 安装torch和torch_npu，因为版本迭代，包名存在出入，根据实际修改
+wget https://download.pytorch.org/whl/cpu/torch-2.1.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+pip install torch-2.1.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+wget https://gitee.com/ascend/pytorch/releases/download/v7.0.0-pytorch2.1.0/torch_npu-2.1.0.post12-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+pip install torch_npu-2.1.0.post12-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+
+# apex for Ascend 需要自行参考 https://gitee.com/ascend/apex 完成whl包的构建，再通过如下指令完成安装
+pip install apex-*.whl
+```
+
+拉取代码仓并完成安装:
+```shell
+# 设置环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+source /usr/local/Ascend/nnal/atb/set_env.sh
+
+# 安装MindSpeed加速库
+git clone https://gitee.com/ascend/MindSpeed.git
+cd MindSpeed
+git checkout 2.0.0_core_r0.8.0  # checkout commit from MindSpeed 2.0.0_core_r0.8.0
+pip install -r requirements.txt 
+pip3 install -e .
+cd ..
+
+# 准备MindSpeed-LLM及Megatron-LM源码
+git clone https://gitee.com/ascend/MindSpeed-LLM.git 
+git clone https://github.com/NVIDIA/Megatron-LM.git  # megatron从github下载，请确保网络能访问
+cd Megatron-LM
+git checkout core_r0.8.0
+cp -r megatron ../MindSpeed-LLM/
+cd ../MindSpeed-LLM
+git checkout 2.0.0
+
+pip install -r requirements.txt  # 安装其余依赖库
+```
+
 ## 创建容器
 ```bash
 docker run -dit -u root --ipc=host --network host --privileged \
