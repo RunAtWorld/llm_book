@@ -6,7 +6,7 @@
 
 
 
-## Q2： InfiniBand  和 RoCE的联系与区别？
+## Q2： InfiniBand 和 RoCE的联系与区别？
 
 
 

@@ -1,2 +1,0 @@
-# MindSpeed-RL
-
