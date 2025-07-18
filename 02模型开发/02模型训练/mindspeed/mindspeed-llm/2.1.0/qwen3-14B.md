@@ -10,6 +10,7 @@ conda activate py310
 
 ### PTA安装
 
+
 准备[torch_npu](https://www.hiascend.com/developer/download/community/result?module=pt)和[apex](https://gitee.com/ascend/apex)，参考[Ascend Extension for PyTorch 配置与安装](https://www.hiascend.com/document/detail/zh/Pytorch/60RC2/configandinstg/instg/insg_0001.html)或执行以下命令安装：
 
 ```shell
@@ -29,8 +30,14 @@ pip install apex-0.1.dev20241015+ascend-cp310-cp310-linux_aarch64.whl
 python3 -c "import torch;import torch_npu;print(torch_npu.npu.is_available())"
 ```
 
-apex构建参考命令
+**apex构建参考命令**
 
+> 注意：后续过程经常需要CANN环境变量，为了方便可以提前讲相关生效环境变量的脚本写入 .bashrc 中
+```
+# 设置环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+source /usr/local/Ascend/nnal/atb/set_env.sh
+```
 ```
 git clone -b master https://gitee.com/ascend/apex.git
 cd apex/
@@ -39,7 +46,7 @@ bash scripts/build.sh --python=3.10
 #安装
 cd apex/dist/
 pip3 uninstall apex
-pip3 install --upgrade apex-0.1+ascend-3.10.whl # version为python版本和cpu架构
+pip3 install --upgrade torch_npu-2.6.0rc1-cp310-cp310-manylinux_2_28_aarch64.whl # version中包含python版本和cpu架构
 ```
 ### MindSpeed-LLM及相关依赖安装
 
@@ -51,6 +58,7 @@ source /usr/local/Ascend/nnal/atb/set_env.sh
 # 安装MindSpeed加速库
 git clone https://gitee.com/ascend/MindSpeed.git
 cd MindSpeed
+git checkout -b core_r0.8.0
 git checkout 2c085cc9  # checkout commit from MindSpeed core_r0.8.0 in 2025.04.01
 pip install -r requirements.txt 
 pip3 install -e .
@@ -67,7 +75,20 @@ git checkout 2.1.0
 
 pip install -r requirements.txt  # 安装其余依赖库
 ```
+
+由于qwen3依赖 transformers==4.51.0，单独安装
+```shell
+pip install transformers==4.51.0
+```
+
+所有依赖都安装后，可以将环境保存为镜像以便下次使用
+
+```
+docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  llm_qwen3 a3_mindspeed-llm:2.1.0
+```
+
 ## 二、创建容器
+
 ```bash
 docker run -dit -u root --ipc=host --network host --privileged \
     --name 'llm_qwen3' \
@@ -111,7 +132,7 @@ docker run -dit -u root --ipc=host --network host --privileged \
 
 ```bash
 # 请先根据如下指导完成脚本修改配置
-bash MindSpeed-LLM/examples/mcore/qwen3/data_convert_qwen3_pretrain.sh
+bash examples/mcore/qwen3/data_convert_qwen3_pretrain.sh
 ```
 
 如下为调整后的hf2mcore权重转换示例脚本
@@ -179,6 +200,9 @@ data_convert_qwen3_pretrain.sh 中的配置需做如下修改：
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
 mkdir ./dataset
 
 python ./preprocess_data.py \
