@@ -131,30 +131,31 @@ docker run -dit -u root --ipc=host --network host --privileged \
 使用官方提供的转换脚本，获取对应切分的mg权重。
 
 ```bash
+bash examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh
 # 请先根据如下指导完成脚本修改配置
-bash examples/mcore/qwen3/data_convert_qwen3_pretrain.sh
 ```
 
-如下为调整后的hf2mcore权重转换示例脚本
+如下 ckpt_convert_qwen3_hf2mcore.sh 为调整后的hf2mcore权重转换示例脚本
 
 ```bash
-# 修改 ascend-toolkit 路径
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+# 生效 ascend-toolkit 环境变量
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 设置需要的权重转换参数
 python convert_ckpt.py \
-       --use-mcore-models \
-       --model-type GPT \
-       --load-model-type hf \
-       --save-model-type mg \
-       --target-tensor-parallel-size 4 \
-       --target-pipeline-parallel-size 2 \
-       --add-qkv-bias \
-       --load-dir /apps/hw/weights/Qwen2.5-7B/ \
-       --save-dir ./model_weights/qwen2.5_mcore/ \
-       --tokenizer-model /apps/hw/weights/Qwen2.5-7B/tokenizer.json \
-       --model-type-hf llama2 \
-       --params-dtype bf16 # --num-layer-list 11, 13, 19, 21 参数根据需要添加
+    --use-mcore-models \
+    --model-type GPT \
+    --load-model-type hf \
+    --save-model-type mg \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 4 \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --load-dir /apps/hw/weights/Qwen3-14B/ \
+    --save-dir /apps/hw/outputs/qwen3/model_weights/qwen3_14b_mcore_tp2pp4/ \
+    --tokenizer-model /apps/hw/weights/Qwen3-14B/tokenizer.json \
+    --params-dtype bf16 \
+    --model-type-hf qwen3
 ```
 
 参数解析
@@ -163,8 +164,8 @@ python convert_ckpt.py \
 |-------------------------------------|------------------------------------------------------------|---|
 | `--model-type GPT`                  | 指定模型类型为GPT系列                                               | ✅ |
 | `--use-mcore-models`                | 转换为Megatron-Mcore格式                        | ✅ |
-| `--target-tensor-parallel-size 1`   | 张量并行度设置（建议配置1）                                             | ✅ |
-| `--target-pipeline-parallel-size 4` | 流水线并行度设置（建议保持4）                                            | ✅ |
+| `--target-tensor-parallel-size`   | 张量并行度设置                                             | ✅ |
+| `--target-pipeline-parallel-size` | 流水线并行度设置                                            | ✅ |
 | `--tokenizer-model`                 | 指定分词器路径                                                    | ✅ |
 | `--load-model-type`                 | 加载权重的类别（可以是hf、mg）                                          | ✅ |
 | `--save-model-type`                 | 存储权重的类别（可以是hf、mg）                                          | ✅ |
@@ -177,7 +178,7 @@ python convert_ckpt.py \
 
 ### 3.2 预训练数据集处理
 
-通过对各种格式的数据做提前预处理，避免原始数据的反复处理加载，将所有的数据都统一存储到为.bin和.idx两个文件中，详见[预训练数据处理](./pytorch/solutions/pretrain/pretrain_dataset.md)
+通过对各种格式的数据做提前预处理，避免原始数据的反复处理加载，将所有的数据都统一存储到为.bin和.idx两个文件中，详见[预训练数据处理](https://gitee.com/ascend/MindSpeed-LLM/docs/pytorch/solutions/pretrain/pretrain_dataset.md)
 
 常用的预训练数据集包括alpaca、enwiki、c4等，链接中提供了数据集下载地址。
 
@@ -186,15 +187,15 @@ python convert_ckpt.py \
 如下以alpaca数据集为例，进行预训练数据集示例。
 
 ```shell
-# 根据链接提供地址，通过wget获取数据集元数据
+# 根据链接提供地址，通过wget获取数据集数据
 mkdir dataset
 cd dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
-# 使用仓库提供的数据处理脚本，获取预训练数据集。
-# 请根据如下指导完成脚本修改配置
+# 使用仓库提供的数据处理脚本，转换预训练数据集为mg格式
 bash examples/mcore/qwen3/data_convert_qwen3_pretrain.sh
+# 请根据如下指导完成脚本修改配置
 ```
 data_convert_qwen3_pretrain.sh 中的配置需做如下修改：
 ```shell
@@ -210,7 +211,7 @@ python ./preprocess_data.py \
     --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
     --tokenizer-type PretrainedFromHF \
     --handler-name GeneralPretrainHandler \
-    --output-prefix ./dataset/enwiki \
+    --output-prefix /apps/hw/outputs/qwen3/datasets/enwiki \
     --json-keys text \
     --workers 4 \
     --log-interval 1000
@@ -231,34 +232,43 @@ python ./preprocess_data.py \
 
 完成了数据集处理和权重转换之后，可以开始拉起预训练任务。
 
-#### 启动单机预训练
+#### 3.3.1 启动单机预训练
 
-##### 配置预训练参数
+打开示例脚本
+
+```
+vim examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
+```
+
+示例脚本内容如下：
 
  ```shell
-# 打开示例脚本
-vim examples/mcore/qwen25/pretrain_qwen25_7b_32k_ptd.sh
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
 
-# 单机配置如下
-NPUS_PER_NODE=8           # 使用单节点的8卡NPU
-MASTER_ADDR=locahost      # 以本节点ip地址为master_ip
-MASTER_PORT=6000          # 本节点端口号为6000
-NNODES=1                  # 单机，即一台节点，多机即多节点
-NODE_RANK=0               # 单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
-WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="./model_weights/qwen2.5_mcore/"  # 权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="./ckpt/qwen25-7b"                # 训练完成后的权重保存路径
-DATA_PATH="./datasets/alpaca_text_document"      # 数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
-TOKENIZER_PATH="/apps/hw/weights/Qwen2.5-7B/" # 词表路径，填入下载的开源权重词表路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/model_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/save_weights/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/datasets/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
-TP=4                # 权重转换设置--target-tensor-parallel-size 1，修改为1
-PP=2                # 权重转换设置--target-pipeline-parallel-size 4，修改为4，与权重转换时一致
-SEQ_LEN=4096        # 修改seq_length为4096 
-MBS=1               # 设置micro-batch-size为1
-GBS=64              # 设置global-batch-size为64
-
+TP=2  #权重转换设置--target-tensor-parallel-size 2，修改为2
+PP=4  #权重转换设置--target-pipeline-parallel-size 4，修改为4
+CP=1  #序列并行
+MBS=1 #设置micro-batch-size为1
+GBS=128 #设置global-batch-size为64
+SEQ_LENGTH=4096  #设置seq_length为4096 
+TRAIN_ITERS=500 #多少步存一次ckpt
+CP_TYPE='ulysses_cp_algo' #序列并行算法
 # 完成如上修改后保存关闭脚本
  ```
 
@@ -268,10 +278,10 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 source /usr/local/Ascend/nnal/atb/set_env.sh
 
 # 启动预训练脚本
-bash examples/mcore/qwen25/pretrain_qwen25_7b_32k_ptd.sh
+bash examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
 ```
 
-![image-20250716174646716](qwen2.5-7B.assets/image-20250716174646716.png)
+![image-20250718113913675](qwen3-14B.assets/image-20250718113913675.png)
 
 脚本中特性包含训练参数也包含优化特性，如下部分参数解释
 
@@ -286,28 +296,44 @@ bash examples/mcore/qwen25/pretrain_qwen25_7b_32k_ptd.sh
 | `--untie-embeddings-and-output-weights` | 根据原模型要求将output层和embedding层的权重解耦 |
 | `--bf16`                                | 昇腾芯片对BF16精度支持良好，可显著提升训练速度       |
 
-#### 启动多机预训练任务
+训练任务启动后，日志存储在 logs 下。
 
-如果需要启动多机预训练任务，那么在单机预训练脚本的基础上，做如下修改，
+如果需要后台启动任务
 
-##### 配置预训练参数
+```
+nohup bash examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh >pretrain_qwen3_14b_4K_ptd.log 2>&1 &
+```
+
+终止训练进程
+
+```
+pkill -9 python
+```
+
+#### 3.3.2 启动多机预训练任务(待验证)
+
+启动多机预训练任务，对在单机预训练脚本的基础上
+
+```
+vim examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
+```
+
+做如下修改
 
  ```shell
-# vi examples/mcore/qwen25/pretrain_qwen25_7b_32k_ptd.sh 打开示例脚本
-
-# 单机配置如下
+# 多机配置如下
 NPUS_PER_NODE=8           # 同单机
 MASTER_ADDR=${master_ip}  # 参与多机训练的节点都配置为master_ip
-MASTER_PORT=6000          # 本节点端口号为6000
+MASTER_PORT=6015          # 本节点端口号为6000
 NNODES=1                  # 根据参与节点数量配置
 NODE_RANK=0               # 多机为(0,NNODES-1)，不同节点不可重复，master_node rank为0，其ip为master_ip
 WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
 # 参与节点都要有如下数据
-CKPT_LOAD_DIR="./model_weights/qwen2.5_mcore/"  
-CKPT_SAVE_DIR="./ckpt/qwen25-7b"                
-DATA_PATH="./dataset/alpaca_text_document"      
-TOKENIZER_PATH="./model_from_hf/qwen2.5-7b-hf/"
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/model_weights/qwen3_14b_mcore_tp2pp4/"  # 权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/save_weights/qwen3_14b_mcore_tp2pp4/"   # 训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/datasets/enwiki_text_document" # 数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 词表路径，填入下载的开源权重词表路径
  ```
 
 **注意**：
