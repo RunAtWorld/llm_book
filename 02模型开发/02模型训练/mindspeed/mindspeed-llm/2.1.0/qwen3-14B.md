@@ -1,14 +1,21 @@
 # Qwen3-14B适配
 
-## 一、依赖安装
+## 一、依赖安装&制作镜像
 
-### 创建python环境
+### 1.1 HDK与CANN安装
+
+HDK安装：参考版本配套表，根据系统和硬件产品型号，选择对应版本的`driver`和`firmware`下载[驱动固件](https://www.hiascend.com/hardware/firmware-drivers/community)，并参考完成[NPU驱动固件安装](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/81RC1alpha002/softwareinst/instg/instg_0005.html?Mode=PmIns&OS=Ubuntu&Software=cannToolKit)，安装后重启os系统生效。容器环境一般安装在宿主机上。
+
+CANN安装：参考版本配套表，根据系统选择`aarch64`或`x86_64`对应版本的`cann-toolkit`、`cann-kernel`和`cann-nnal`，下载[CANN软件包](https://www.hiascend.com/developer/download/community/result?module=cann)，参考[CANN安装教程](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/81RC1alpha002/softwareinst/instg/instg_0008.html?Mode=PmIns&OS=Ubuntu&Software=cannToolKit)完成cann包安装。容器环境一般安装在容器内。
+
+### 1.2 创建python环境
+
 ```shell
 conda create --name py310 python=3.10
 conda activate py310
 ```
 
-### PTA安装
+### 1.3 PTA安装
 
 
 准备[torch_npu](https://www.hiascend.com/developer/download/community/result?module=pt)和[apex](https://gitee.com/ascend/apex)，参考[Ascend Extension for PyTorch 配置与安装](https://www.hiascend.com/document/detail/zh/Pytorch/60RC2/configandinstg/instg/insg_0001.html)或执行以下命令安装：
@@ -48,7 +55,7 @@ cd apex/dist/
 pip3 uninstall apex
 pip3 install --upgrade torch_npu-2.6.0rc1-cp310-cp310-manylinux_2_28_aarch64.whl # version中包含python版本和cpu架构
 ```
-### MindSpeed-LLM及相关依赖安装
+### 1.4 MindSpeed-LLM及相关依赖安装
 
 ```shell
 # 使能环境变量
@@ -87,11 +94,26 @@ pip install transformers==4.51.0
 docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  llm_qwen3 a3_mindspeed-llm:2.1.0
 ```
 
+以上安装后，相关组件配套表如下：
+
+| 软件          | 版本               | 部署方式 |
+| ------------- | ------------------ | -------- |
+| Driver        | AscendHDK 25.0.RC1 | 宿主机   |
+| Firmware      | AscendHDK 25.0.RC1 | 宿主机   |
+| Python        | 3.8.10             | 容器内   |
+| CANN          | CANN 8.1.RC1       | 容器内   |
+| Torch         | 2.1.0              | 容器内   |
+| Torch_npu     | release v7.0.0     | 容器内   |
+| MindSpeed     | 2.0.0_core_r0.8.0  | 容器内   |
+| MindSpeed-LLM | 2.0.0              | 容器内   |
+| Megatron-LM   | core_r0.8.0        | 容器内   |
+| Docker镜像OS  | Ubuntu 20.04.6     | /        |
+
 ## 二、创建容器
 
 ```bash
 docker run -dit -u root --ipc=host --network host --privileged \
-    --name 'llm_qwen3' \
+    --name 'qwen3_14b' \
     --device=/dev/davinci0 \
     --device=/dev/davinci1 \
     --device=/dev/davinci2 \
@@ -111,6 +133,7 @@ docker run -dit -u root --ipc=host --network host --privileged \
     --device=/dev/davinci_manager \
     --device=/dev/devmm_svm \
     --device=/dev/hisi_hdc \
+    -p 50000:3000 \
     -v /usr/local/Ascend/driver:/usr/local/Ascend/driver \
     -v /usr/local/Ascend/firmware:/usr/local/Ascend/firmware \
     -v /usr/local/Ascend/add-ons/:/usr/local/Ascend/add-ons/ \
@@ -119,7 +142,7 @@ docker run -dit -u root --ipc=host --network host --privileged \
     -v /var/log/npu/conf/slog/slog.conf:/var/log/npu/conf/slog/slog.conf \
     -v /apps:/apps \
     -v /home:/home \
-    a3_llm:v2.0 bash
+    a3_llm:v2.1.0 bash
 ```
 
 ## 三、预训练
