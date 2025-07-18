@@ -174,8 +174,6 @@ python convert_ckpt.py \
 | `--model-type-hf`                 | huggingface模型类别，默认为llama2                                  |   |
 | `--params-dtype`                 | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅  |
 
-- 注意：对该qwen2.5-7b模型，此处推荐的切分配置是tp1pp4，对应上述配置。
-
 ### 3.2 预训练数据集处理
 
 通过对各种格式的数据做提前预处理，避免原始数据的反复处理加载，将所有的数据都统一存储到为.bin和.idx两个文件中，详见[预训练数据处理](https://gitee.com/ascend/MindSpeed-LLM/docs/pytorch/solutions/pretrain/pretrain_dataset.md)
@@ -243,8 +241,8 @@ vim examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
 示例脚本内容如下：
 
  ```shell
-export CUDA_DEVICE_MAX_CONNECTIONS=1
-export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
 
 # 基础配置
@@ -340,4 +338,51 @@ TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 词表路径，填入下载的开
 
 - 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
 - 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
+
+## 四、SFT微调
+
+
+
+## 五、Lora微调
+
+## 六、附加说明
+
+### 6.1.1 模型脚本环境变量说明
+
+以上模型列表中脚本的环境变量说明具体如下：
+
+| 环境变量名称                      | 环境变量描述                                                                    |
+|-----------------------------|---------------------------------------------------------------------------|
+| ASCEND_LAUNCH_BLOCKING      | 将Host日志输出到串口,0-关闭/1-开启。                                                   |
+| ASCEND_SLOG_PRINT_TO_STDOUT | 设置默认日志级别,0-debug/1-info/2-warning/3-error。                                |
+| HCCL_WHITELIST_DISABLE      | HCCL白名单开关,1-关闭/0-开启。                                                      |
+| HCCL_CONNECT_TIMEOUT        | 设置HCCL超时时间，默认值为120。                                                       |
+| CUDA_DEVICE_MAX_CONNECTIONS | 定义了任务流能够利用或映射到的硬件队列的数量。                                                   |
+| TASK_QUEUE_ENABLE           | 用于控制开启task_queue算子下发队列优化的等级，0：关闭，1：开启Level 1优化，2：开启Level 2优化。             |
+| COMBINED_ENABLE             | 设置combined标志。设置为0表示关闭此功能；设置为1表示开启，用于优化非连续两个算子组合类场景。                       |
+| PYTORCH_NPU_ALLOC_CONF      | 内存碎片优化开关，默认是expandable_segments:False，使能时expandable_segments:True。        |
+| ASCEND_RT_VISIBLE_DEVICES   | 指定哪些Device对当前进程可见，支持一次指定一个或多个Device ID。通过该环境变量，可实现不修改应用程序即可调整所用Device的功能。 |
+| NPUS_PER_NODE               | 配置一个计算节点上使用的NPU数量。                                                        |
+| HCCL_SOCKET_IFNAME          | 指定hccl socket通讯走的网卡配置。                                                    |
+| GLOO_SOCKET_IFNAME          | 指定gloo socket通讯走的网卡配置。                                                    |
+| HCCL_LOGIC_SUPERPOD_ID      | 指定当前设备的逻辑超节点ID，如果走ROCE，不同多机超节点ID不同，0-N。                                   |
+
+### 6.1.2 训练参数说明
+
+训练参数解析
+
+| 参数                              | 说明                                                         | 必填 |
+| --------------------------------- | ------------------------------------------------------------ | ---- |
+| `--model-type GPT`                | 指定模型类型为GPT系列                                        | ✅    |
+| `--use-mcore-models`              | 转换为Megatron-Mcore格式                                     | ✅    |
+| `--target-tensor-parallel-size`   | 张量并行度设置                                               | ✅    |
+| `--target-pipeline-parallel-size` | 流水线并行度设置                                             | ✅    |
+| `--tokenizer-model`               | 指定分词器路径                                               | ✅    |
+| `--load-model-type`               | 加载权重的类别（可以是hf、mg）                               | ✅    |
+| `--save-model-type`               | 存储权重的类别（可以是hf、mg）                               | ✅    |
+| `--load-dir`                      | 权重文件加载路径                                             | ✅    |
+| `--save-dir`                      | 权重文件保存路径                                             | ✅    |
+| `--model-type-hf`                 | huggingface模型类别，默认为llama2                            |      |
+| `--params-dtype`                  | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅    |
+| `--tensorboard-dir`               | 指定tensorboard的事件存储目录，如` ./tb `。使用方法为 `tensorboard --logdir=./tb --port=6007` |      |
 
