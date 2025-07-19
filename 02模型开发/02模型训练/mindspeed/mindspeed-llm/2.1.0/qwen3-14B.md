@@ -435,9 +435,235 @@ TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 词表路径，填入下载的开
     <assistant>: 强化学习是一种让智能体通过试错方式学习策略的方法。
     ```
 
-### 4.2 使用alpaca SFT微调
+### 4.2 使用Alpaca数据集 SFT微调
+
+#### 4.2.1 Alpaca数据集
+
+Alpaca风格示例：
+
+```
+[
+{
+    "instruction": "人类指令（必填）",
+    "input": "人类输入（选填）",
+    "output": "模型回答（必填）",
+    "system": "系统提示词（选填）",
+    "history": [
+    ["第一轮指令（选填）", "第一轮回答（选填）"],
+    ["第二轮指令（选填）", "第二轮回答（选填）"]
+    ]
+}
+]
+```
+
+常用的对话指令微调数据集有：
+- [单轮对话：Alpaca英文数据集](https://huggingface.co/datasets/tatsu-lab/alpaca)
+- [单轮对话：Alpaca中文数据集](https://huggingface.co/datasets/llm-wizard/alpaca-gpt4-data-zh/tree/main)
+- [多轮对话：AlpacaHistroy数据集](https://huggingface.co/datasets/kimnt93/oaast-selected)
+- [链式思维 (CoT)：Alpaca数据集](https://huggingface.co/datasets/QingyiSi/Alpaca-CoT/tree/main/Auto-CoT)
+- [BELLE：指令微调数据集](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
+
+Alpaca风格微调数据集下载可以基于网页直接下载，也可以基于命令行下载，比如：
+
+```bash
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+```
+#### 4.2.2 Alpaca风格数据集处理
+
+在指令监督微调时，`instruction` 列对应的内容会与 `input` 列对应的内容拼接后作为人类指令，即人类指令为 `instruction\ninput`其中 `\n`为用于连接的换行符。而 `output` 列对应的内容为模型回答。如果指定了history，则会将历史对话内容也加入进来。如果指定system 列，则对应的内容将被作为系统提示词。
+
+对数据集处理脚本 data_convert_qwen3_instruction.sh 中的配置进行修改：
+
+```
+vim examples/mcore/qwen3/data_convert_qwen3_instruction.sh
+```
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+mkdir ./finetune_dataset
+
+python ./preprocess_data.py \
+    --input  /apps/hw/datasets/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
+    --output-prefix /apps/hw/outputs/qwen3/finetune_dataset/alpaca \
+    --handler-name AlpacaStyleInstructionHandler \
+    --tokenizer-type PretrainedFromHF \
+    --workers 4 \
+    --log-interval 1000 \
+    --prompt-type qwen
+    # --map-keys '{"prompt":"instruction","query":"input","response":"output"}' # 默认值，可不传
+```
+
+修改后，执行脚本
+
+```
+mkdir -p /apps/hw/outputs/qwen3/finetune_dataset
+bash examples/mcore/qwen3/data_convert_qwen3_instruction.sh
+```
+
+参数解析如下：
+
+* `--input`: 可以直接输入到数据集目录或具体文件，如果是目录，则处理全部文件, 支持 .parquet \ .csv \ .json \ .jsonl \ .txt \ .arrow 格式， 同一个文件夹下的数据格式需要保持一致 
+* `--prompt-type`: 用于指定模型模板，能够让base模型微调后能具备更好的对话能力。`prompt-type`的可选项可以在[templates](https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/mindspeed_llm/tasks/preprocess/templates.py)文件内查看。
+* `--map-keys`: 参数用于配置字段映射来使用数据集。参数完整应为`'{"prompt":"instruction","query":"input","response":"output","system":"system","history":"history"}'`。其中参数的key值`"prompt"、"query"、"response"、"system"、"history"`代表数据集列映射后的属性，在代码中是固定的，不应改变，value值`"instruction"、"input"、"output"、"system"、"history"`对应数据集的列名。考虑到alpaca数据集大部分都是`["instruction", "input", "output"]`型格式，因此我们为key值`["prompt", "query", "response"]`设置了默认值。因此上面格式`--map-keys`参数可简略为`'{"system": "system","history": "history"}'`。若数据集中无`system`与`history`列，则`--map-keys`可省略。
+
+**示例1：**
+
+```
+--map-keys '{"prompt":"notice","query":"question","response":"answer","system":"system_test","history":"histories"}'
+```
+
+则会提取数据集里的`"notice"、"question"、"answer"、"system_test"、"histories"`列。
+
+**示例2：**
+
+```
+--map-keys '{"history":"histories"}'
+```
+
+则会提取数据集里的`"instruction"、"input"、"output"、"histories"`列，其中`"instruction"、"input"、"output"`列作为默认值隐式存在。 
+
+转换后，finetune_dataset 目录下文件如下：
+
+```
+alpaca_packed_attention_mask_document.bin
+alpaca_packed_attention_mask_document.idx
+alpaca_packed_input_ids_document.bin
+alpaca_packed_input_ids_document.idx
+alpaca_packed_labels_document.bin
+alpaca_packed_labels_document.idx
+```
+
+#### 4.2.3 SFT微调训练
+
+修改单机微调脚本 tune_qwen3_14b_4K_full_ptd.sh 
+
+```
+vim examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh 
+```
+
+示例脚本内容如下：
 
 
+```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
+export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/model_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/save_weights_sft/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset/alpaca"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
+
+TP=2
+PP=4
+MBS=1
+GBS=16
+SEQ_LENGTH=4096
+TRAIN_ITERS=1000 #训练1000步
+
+...
+
+DATA_ARGS="
+    --data-path $DATA_PATH \
+    --split 100,0,0
+"
+
+OUTPUT_ARGS="
+    --log-interval 1 \
+    --save-interval ${TRAIN_ITERS} \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --log-throughput
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --prompt-type qwen \
+    --variable-seq-lengths
+"
+```
+
+微调脚本相关参数说明
+- `DATA_PATH`：数据集路径。请注意实际数据预处理生成文件末尾会增加`_input_ids_document`等后缀，该参数填写到数据集的前缀即可。例如实际的数据集相对路径是`./finetune_dataset/alpaca/alpaca_packed_input_ids_document.bin`等，那么只需要填`./finetune_dataset/alpaca/alpaca`即可。
+- `is-instruction-dataset`：用于指定微调过程中采用指令微调数据集，以确保模型依据特定指令数据进行微调。
+- `variable-seq-lengths`：在不同的mini-batch间支持以动态的序列长度进行微调，默认padding到`8`的整数倍，可以通过`pad-to-multiple-of`参数来修改padding的倍数。假设微调时指定`--seq-length`序列长度为1024，开启`--variable-seq-lengths`后，序列长度会padding到真实数据长度的8整数倍。如下图所示：  ![variable_seq_lengths](qwen3-14B.assets/variable_seq_lengths-17529189902421.png)
+
+* `--save-interval` 多少步存一次ckpt
+
+如果是单机运行场景，只需要在一台机器上启动微调脚本：
+
+```bash
+bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
+```
+
+如果是多机运行，则需要在单机的脚本上修改以下参数：
+
+```shell
+# 多机配置 
+# 根据分布式集群实际情况配置分布式参数
+GPUS_PER_NODE=8  # 每个节点的卡数
+MASTER_ADDR="your master node IP"  # 都需要修改为主节点的IP地址（不能为localhost）
+MASTER_PORT=6000
+NNODES=2  # 集群里的节点数，以实际情况填写,
+NODE_RANK="current node id"  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
+```
+
+最后确保每台机器上的模型路径和数据集路径等无误后，在多个终端上同时启动预训练脚本即可开始训练。
+
+完成微调后，需要进一步验证模型是否具备了预期的输出能力。我们提供了简单的模型生成脚本，只需要加载微调后的模型权重，便可观察模型在不同生成参数配置下的回复。
+
+参考
+
+需要在`examples/mcore/qwen3/generate_qwen3_14b_ptd.sh`脚本中修改以下参数：
+
+```bash
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
+export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+# please fill these path configurations
+CHECKPOINT="/apps/hw/outputs/qwen3/save_weights_sft/iter_0000200" # 指向微调后权重的保存路径
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+
+# Change for multinode config
+MASTER_ADDR=localhost
+MASTER_PORT=6000
+NNODES=1
+NODE_RANK=0
+NPUS_PER_NODE=8
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+然后运行推理脚本：
+
+```bash
+bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
+```
 
 ## 五、Lora微调
 
