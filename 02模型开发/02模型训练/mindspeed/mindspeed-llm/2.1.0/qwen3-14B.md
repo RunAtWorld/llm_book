@@ -267,6 +267,8 @@ vim examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 
 # 基础配置
 NPUS_PER_NODE=8  #使用单节点的8卡NPU
@@ -307,15 +309,16 @@ bash examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
 脚本中特性包含训练参数也包含优化特性，如下部分参数解释
 
 | 参数名                                     | 说明                              |
-|-----------------------------------------|---------------------------------| 
-| `--use-mcore-models`                    | 使用mcore分支运行模型     |          
-| `--disable-bias-linear`                 | 去掉linear的偏移值，与qwen原模型一致         | 
-| `--add-qkv-bias`                        | 增加Q、K、V的偏移值，是权重的组成部分            | 
+|-----------------------------------------|---------------------------------|
+| `--use-mcore-models`                    | 使用mcore分支运行模型     |
+| `--disable-bias-linear`                 | 去掉linear的偏移值，与qwen原模型一致         |
+| `--add-qkv-bias`                        | 增加Q、K、V的偏移值，是权重的组成部分            |
 | `--group-query-attention`               | 开启GQA注意力处理机制                    |
 | `--num-query-groups 4`                  | 配合GQA使用，设置groups为4              |
 | `--position-embedding-type rope`        | 位置编码采用rope方案                    |
 | `--untie-embeddings-and-output-weights` | 根据原模型要求将output层和embedding层的权重解耦 |
 | `--bf16`                                | 昇腾芯片对BF16精度支持良好，可显著提升训练速度       |
+| `--tensorboard-dir`               | 如需要tensorboard显示loss曲线，增加此参数，用于事件存储目录，如`/apps/hw/outputs/qwen3/14b/tb `。查看训练loss曲线使用方法为 `tensorboard --logdir=./tb --port=3000` |
 
 训练任务启动后，日志存储在 logs 下。
 
@@ -407,5 +410,5 @@ TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 词表路径，填入下载的开
 | `--save-dir`                      | 权重文件保存路径                                             | ✅    |
 | `--model-type-hf`                 | huggingface模型类别，默认为llama2                            |      |
 | `--params-dtype`                  | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅    |
-| `--tensorboard-dir`               | 指定tensorboard的事件存储目录，如` ./tb `。使用方法为 `tensorboard --logdir=./tb --port=6007` |      |
+| `--tensorboard-dir`               | 指定tensorboard的事件存储目录，如` ./tb `。查看训练loss曲线使用方法为 `tensorboard --logdir=./tb --port=6007` |      |
 
