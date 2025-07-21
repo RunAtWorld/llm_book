@@ -279,7 +279,7 @@ NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weight/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
 CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
 DATA_PATH="/apps/hw/outputs/qwen3/pretrain_datasets/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
@@ -290,7 +290,7 @@ CP=1  #序列并行
 MBS=1 #设置micro-batch-size为1
 GBS=128 #设置global-batch-size为64
 SEQ_LENGTH=4096  #设置seq_length为4096 
-TRAIN_ITERS=500 #多少步存一次ckpt
+TRAIN_ITERS=2000 #训练多少步
 CP_TYPE='ulysses_cp_algo' #序列并行算法
 # 完成如上修改后保存关闭脚本
  ```
@@ -355,7 +355,7 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weight/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
 CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
 DATA_PATH="/apps/hw/outputs/qwen3/pretrain_datasets/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
@@ -572,7 +572,7 @@ NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weight/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
 CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
 DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset/alpaca"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
@@ -636,11 +636,17 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
 最后确保每台机器上的模型路径和数据集路径等无误后，在多个终端上同时启动预训练脚本即可开始训练。
 
+### 4.2.4 推理验证
+
 完成微调后，需要进一步验证模型是否具备了预期的输出能力。我们提供了简单的模型生成脚本，只需要加载微调后的模型权重，便可观察模型在不同生成参数配置下的回复。
 
-参考
+使用推理脚本  generate_qwen3_14b_ptd.sh
 
-需要在`examples/mcore/qwen3/generate_qwen3_14b_ptd.sh`脚本中修改以下参数：
+```
+vim examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
+```
+
+修改以下参数：
 
 ```bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
@@ -650,14 +656,14 @@ export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
 export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 
 # please fill these path configurations
-CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft/iter_0000200" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft" # 指向微调后权重的保存路径
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 
 # Change for multinode config
 MASTER_ADDR=localhost
 MASTER_PORT=6000
-NNODES=1
-NODE_RANK=0
+NNODES=1 # 集群里的节点数，以实际情况填写,
+NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
 NPUS_PER_NODE=8
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
@@ -674,14 +680,243 @@ bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
 
 ## 五、Lora微调
 
-### 5.1 使用Alpaca数据集 Lora 微调
+### 5.1 Alpaca数据集处理
 
-### 5.1.2 Alpaca风格数据集处理
+Alpaca风格数据集Lora 微调处理和SFT微调数据集处理方式相同。
 
-Alpaca风格数据集处理和SFT微调数据集处理方式相同。
+### 5.2 Lora微调训练
+修改单机微调脚本 tune_qwen3_14b_4K_full_ptd.sh 
 
-### 5.1.3 Lora微调训练
+```
+vim examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh
+```
 
+示例脚本内容如下：
+
+```shell
+# 初始化环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+source /usr/local/Ascend/nnal/atb/set_env.sh
+export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+export HCCL_CONNECT_TIMEOUT=1800 #定义HCCL建立链接的超时时间。
+export CUDA_DEVICE_MAX_CONNECTIONS=1  #定义了任务流能够利用或映射到的硬件队列的数量。
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset/alpaca"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径4
+TP=2
+PP=4
+SEQ_LENGTH=4096
+TRAIN_ITERS=2000
+
+...
+
+OUTPUT_ARGS="
+    --load ${CKPT_LOAD_DIR} \
+    --save ${CKPT_SAVE_DIR} \
+    --log-interval 1 \
+    --save-interval ${TRAIN_ITERS} \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --no-load-optim \
+    --no-load-rng
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --tokenizer-not-use-fast \
+    --prompt-type qwen \
+    --variable-seq-lengths \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-fusion \
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2
+"
+```
+参数说明：
+
+- **`--load`**:  若不指定该参数加载权重，模型会随机初始化权重。
+- **`--prompt-type`**:  指定模型模板，使 base 模型在微调后具备更好的对话能力。
+- **`--variable-seq-lengths`**:  支持动态序列长度微调，默认按 8 的倍数进行 padding，可以通过 `--pad-to-multiple-of` 参数修改 padding 的倍数。
+- **`--lora-r`**:  LoRA rank，表示低秩矩阵的维度。较低的 rank 值模型在训练时会使用更少的参数更新，从而减少计算量和内存消耗。然而，过低的 rank 可能限制模型的表达能力。
+- **`--lora-alpha`**:  控制 LoRA 权重对原始权重的影响比例, 数值越高则影响越大。一般保持 `α/r` 为 2。
+- **`--lora-fusion`**:  是否启用<a href="https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/features/cc_lora.md">CCLoRA</a>算法，该算法通过计算通信掩盖提高性能。
+- **`--lora-target-modules`**:  选择需要添加 LoRA 的模块。  *mcore 模型可选模块：* `linear_qkv`, `linear_proj`, `linear_fc1`, `linear_fc2`
+- **`--lora-load`**:  加载 LoRA 权重断点继续训练或用于推理。在推理时需与 `--load` 参数配合使用，加载 `CKPT_SAVE_DIR` 路径下的 LoRA 权重。
+
+### 5.3 Lora权重与Base权重的合并
+
+基于lora微调训练完后，得到Lora权重与Base权重存在区别，无法直接用于续训，需要转换后才可使用，添加以下参数即可将训练好的 Lora 权重与 Base 权重融合,合并后转换为 Mcore 权重：
+
+```bash
+    --lora-load ${CHECKPOINT_LORA}  \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
+```
+
+修改合并脚本 ckpt_convert_qwen3_mcore2mcore_lora.sh
+
+```
+vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
+```
+
+将 Lora权重 合并转换为 Mcore 权重的示例参数：
+
+```shell
+# 生效 ascend-toolkit 环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+python convert_ckpt.py \
+    --use-mcore-models \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 4 \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
+    --load-dir /apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
+    --lora-load /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4/ \
+    --save-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/ \
+    --model-type-hf qwen3
+```
+
+> 关键参数： --save-model-type mg
+
+启动转换脚本：
+
+```shell
+bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
+```
+
+### 5.4 lora权重合并转换为 HuggingFace 权重(有问题，不通)
+
+若希望将lora权重合并转换为 Hugging Face（HF）格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
+
+```
+vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
+```
+
+将 Lora权重 合并转换为HF权重的示例参数：
+
+```shell
+# 生效 ascend-toolkit 环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+python convert_ckpt.py \
+    --use-mcore-models \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type hf \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 4 \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
+    --load-dir /apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
+    --lora-load /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4/ \
+    --save-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_hf_tp2pp4_merge/ \
+    --model-type-hf qwen3
+```
+
+>  关键参数： --save-model-type hf 
+
+**注意：** `lora` 参数的值应与微调时的参数设置保持一致，以确保转换后的模型具有相同的性能表现和兼容性。
+
+启动转换脚本：
+
+```shell
+bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
+```
+
+报错
+
+![image-20250721172751799](qwen3-14B.assets/image-20250721172751799.png)
+
+### 5.5 LoRA 推理
+
+推理方法参考 SFT的推理验证
+
+使用推理脚本  generate_qwen3_14b_ptd.sh
+
+```
+vim examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
+```
+
+修改  `CHECKPOINT` 的权重路径为
+
+修改以下参数：
+
+```bash
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
+export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+# please fill these path configurations
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft" # 指向微调后权重的保存路径
+
+...
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+然后运行推理脚本：
+
+```bash
+bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
+```
+
+### 5.6 LoRA 微调权重评估
+
+使用 LoRA 微调权重的专用评估脚本：
+
+```shell
+# 初始化环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+source /usr/local/Ascend/nnal/atb/set_env.sh
+
+# 启动任务
+bash examples/legacy/llama2/evaluate_llama2_7B_lora_mmlu_ptd.sh
+```
+
+评估参数说明
+
+- **`--prompt-type`**：模型对话模板，确保评估输入结构匹配模型需求。
+- **`--hf-chat-template`**：若模型具备内置 `chat_template` 属性，可添加该参数，使用内置模板。
+- **`--eval-language`**：指定数据集语言，默认 `en`（英文），中文数据集应设置为 `zh`。
+
+注意事项
+
+- **对话模板选择**：根据模型和数据需求选择合适模板，确保微调和评估一致性。
+- **语言匹配**：设定数据集语言以优化评估效果。
+- **内置模板使用**：启用 `--hf-chat-template` 时简化输入格式，确保评估的准确性。
 
 
 ## 六、附加说明
