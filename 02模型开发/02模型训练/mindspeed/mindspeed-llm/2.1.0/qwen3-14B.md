@@ -809,7 +809,46 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
-### 5.4 lora权重合并转换为 HuggingFace 权重(有问题，不通)
+### 5.4 权重从mcore转为HF(有问题，不通)
+
+修改转换脚本 ckpt_convert_qwen3_mcore2hf.sh
+
+```
+vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh
+```
+
+将 Lora权重 合并转换为HF权重的示例参数：
+
+```shell
+# 生效 ascend-toolkit 环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+python convert_ckpt.py \
+    --use-mcore-models \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type hf \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 4 \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --load-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/ \
+    --save-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge2hf/ \
+    --params-dtype bf16 \
+    --model-type-hf qwen3 \
+    --tokenizer-model /apps/hw/weights/Qwen3-14B/tokenizer.json 
+```
+
+>  关键参数： --save-model-type hf 
+
+```shell
+bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh
+```
+
+报错
+
+### 5.5 lora权重合并转换为 HuggingFace 权重(有问题，不通)
 
 若希望将lora权重合并转换为 Hugging Face（HF）格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
 
@@ -858,7 +897,7 @@ bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 
 ### 5.5 LoRA 推理
 
-推理方法参考 SFT的推理验证
+> 推理方法与SFT的推理方法相同
 
 使用推理脚本  generate_qwen3_14b_ptd.sh
 
@@ -878,7 +917,7 @@ export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
 export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 
 # please fill these path configurations
-CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/" # 指向微调后权重的保存路径
 
 ...
 
