@@ -700,7 +700,7 @@ export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-pa
 # please fill these path configurations
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 CHECKPOINT="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"
-DATA_PATH="your data path"
+DATA_PATH="/apps/hw/datasets/mmlu"
 TASK="mmlu"
 
 # 基础配置
