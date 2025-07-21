@@ -91,7 +91,7 @@ pip install transformers==4.51.0
 所有依赖都安装后，可以将环境保存为镜像以便下次使用
 
 ```
-docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  llm_qwen3 a3_mindspeed-llm:2.1.0
+docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  qwen3_14b a3_llm:v2.1.0
 ```
 
 以上安装后，相关组件配套表如下：
@@ -113,7 +113,7 @@ docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  llm_qwen3 a3_mi
 
 ```bash
 docker run -dit -u root --ipc=host --network host --privileged \
-    --name 'qwen3_14b' \
+    --name 'qwen3_14b_lora' \
     --device=/dev/davinci0 \
     --device=/dev/davinci1 \
     --device=/dev/davinci2 \
@@ -232,7 +232,7 @@ python ./preprocess_data.py \
     --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
     --tokenizer-type PretrainedFromHF \
     --handler-name GeneralPretrainHandler \
-    --output-prefix /apps/hw/outputs/qwen3/datasets/enwiki \
+    --output-prefix /apps/hw/outputs/qwen3/pretrain_datasets/enwiki \
     --json-keys text \
     --workers 4 \
     --log-interval 1000
@@ -279,9 +279,9 @@ NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/model_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/save_weights/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
-DATA_PATH="/apps/hw/outputs/qwen3/datasets/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weight/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/pretrain_datasets/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
 TP=2  #权重转换设置--target-tensor-parallel-size 2，修改为2
@@ -318,7 +318,7 @@ bash examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
 | `--position-embedding-type rope`        | 位置编码采用rope方案                    |
 | `--untie-embeddings-and-output-weights` | 根据原模型要求将output层和embedding层的权重解耦 |
 | `--bf16`                                | 昇腾芯片对BF16精度支持良好，可显著提升训练速度       |
-| `--tensorboard-dir`               | 如需要tensorboard显示loss曲线，增加此参数，用于事件存储目录，如`/apps/hw/outputs/qwen3/14b/tb `。查看训练loss曲线使用方法为 `tensorboard --logdir=./tb --port=3000` |
+| `--tensorboard-dir`               | 如需要tensorboard显示loss曲线，增加此参数，用于事件存储目录，如`/apps/hw/outputs/qwen3/14b/tb/pretrain `。查看训练loss曲线使用方法为 `tensorboard --logdir=/apps/hw/outputs/qwen3/14b/tb/pretrain --port=3000` |
 
 训练任务启动后，日志存储在 logs 下。
 
@@ -353,11 +353,12 @@ NNODES=1                  # 根据参与节点数量配置
 NODE_RANK=0               # 多机为(0,NNODES-1)，不同节点不可重复，master_node rank为0，其ip为master_ip
 WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
-# 参与节点都要有如下数据
-CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/model_weights/qwen3_14b_mcore_tp2pp4/"  # 权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/save_weights/qwen3_14b_mcore_tp2pp4/"   # 训练完成后的权重保存路径
-DATA_PATH="/apps/hw/outputs/qwen3/datasets/enwiki_text_document" # 数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
-TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 词表路径，填入下载的开源权重词表路径
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weight/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/pretrain_datasets/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
  ```
 
 **注意**：
@@ -571,8 +572,8 @@ NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/model_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/save_weights_sft/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weight/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
 DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset/alpaca"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
@@ -649,7 +650,7 @@ export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
 export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 
 # please fill these path configurations
-CHECKPOINT="/apps/hw/outputs/qwen3/save_weights_sft/iter_0000200" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft/iter_0000200" # 指向微调后权重的保存路径
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 
 # Change for multinode config
@@ -672,6 +673,14 @@ bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
 ```
 
 ## 五、Lora微调
+
+### 5.1 使用Alpaca数据集 Lora 微调
+
+### 5.1.2 Alpaca风格数据集处理
+
+Alpaca风格数据集处理和SFT微调数据集处理方式相同。
+
+### 5.1.3 Lora微调训练
 
 
 
