@@ -678,6 +678,56 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
 ```
 
+### 4.2.5 mmlu推理评估
+
+使用评估脚本  generate_qwen3_14b_ptd.sh
+
+```
+vim examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh
+```
+
+修改以下参数：
+
+```shell
+# 初始化环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+source /usr/local/Ascend/nnal/atb/set_env.sh
+# The number of parameters is not aligned
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+# please fill these path configurations
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"
+DATA_PATH="your data path"
+TASK="mmlu"
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+评估参数说明
+
+- **`--prompt-type`**：模型对话模板，确保评估输入结构匹配模型需求。
+- **`--hf-chat-template`**：若模型具备内置 `chat_template` 属性，可添加该参数，使用内置模板。
+- **`--eval-language`**：指定数据集语言，默认 `en`（英文），中文数据集应设置为 `zh`。
+
+注意事项
+
+- **对话模板选择**：根据模型和数据需求选择合适模板，确保微调和评估一致性。
+- **语言匹配**：设定数据集语言以优化评估效果。
+- **内置模板使用**：启用 `--hf-chat-template` 时简化输入格式，确保评估的准确性。
+
 ## 五、Lora微调
 
 ### 5.1 Alpaca数据集处理
@@ -932,30 +982,9 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
 ```
 
-### 5.6 LoRA 微调权重评估
+### 5.6 LoRA权重推理评估
 
-使用 LoRA 微调权重的专用评估脚本：
-
-```shell
-# 初始化环境变量
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-source /usr/local/Ascend/nnal/atb/set_env.sh
-
-# 启动任务
-bash examples/legacy/llama2/evaluate_llama2_7B_lora_mmlu_ptd.sh
-```
-
-评估参数说明
-
-- **`--prompt-type`**：模型对话模板，确保评估输入结构匹配模型需求。
-- **`--hf-chat-template`**：若模型具备内置 `chat_template` 属性，可添加该参数，使用内置模板。
-- **`--eval-language`**：指定数据集语言，默认 `en`（英文），中文数据集应设置为 `zh`。
-
-注意事项
-
-- **对话模板选择**：根据模型和数据需求选择合适模板，确保微调和评估一致性。
-- **语言匹配**：设定数据集语言以优化评估效果。
-- **内置模板使用**：启用 `--hf-chat-template` 时简化输入格式，确保评估的准确性。
+LoRA权重推理评估方法和SFT中mmlu推理评估方法相同。
 
 
 ## 六、附加说明
