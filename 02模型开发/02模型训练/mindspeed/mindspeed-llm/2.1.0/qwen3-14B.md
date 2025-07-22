@@ -323,7 +323,7 @@ bash examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
 | `--position-embedding-type rope`        | 位置编码采用rope方案                    |
 | `--untie-embeddings-and-output-weights` | 根据原模型要求将output层和embedding层的权重解耦 |
 | `--bf16`                                | 昇腾芯片对BF16精度支持良好，可显著提升训练速度       |
-| `--tensorboard-dir`               | 如需要tensorboard显示loss曲线，增加此参数，用于事件存储目录，如`/apps/hw/outputs/qwen3/14b/tb/pretrain `。查看训练loss曲线使用方法为 `tensorboard --logdir=/apps/hw/outputs/qwen3/14b/tb/pretrain --port=3000` |
+| `--tensorboard-dir`               | 如需要tensorboard显示loss曲线，增加此参数，用于事件存储目录，如`/apps/hw/outputs/qwen3/14b/tb/pretrain `。查看训练loss曲线使用方法为 `tensorboard --logdir=/apps/hw/outputs/qwen3/14b/tb/pretrain --port=3000 --bind_all` |
 
 训练任务启动后，日志存储在 logs 下。
 
@@ -398,8 +398,7 @@ python convert_ckpt.py \
     --load-dir /apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/ \
     --save-dir /apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4_2hf/ \
     --params-dtype bf16 \
-    --model-type-hf qwen3 \
-    --tokenizer-model /apps/hw/weights/Qwen3-14B/tokenizer.json 
+    --model-type-hf qwen3
 ```
 
 >  关键参数： --save-model-type hf 
@@ -930,8 +929,7 @@ python convert_ckpt.py \
     --load-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/ \
     --save-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge2hf/ \
     --params-dtype bf16 \
-    --model-type-hf qwen3 \
-    --tokenizer-model /apps/hw/weights/Qwen3-14B/tokenizer.json 
+    --model-type-hf qwen3
 ```
 
 >  关键参数： --save-model-type hf 
