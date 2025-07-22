@@ -112,7 +112,7 @@ docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  qwen3_14b a3_ll
 ## 二、创建容器
 
 ```bash
-docker run -dit -u root --ipc=host --network host --privileged \
+docker run -dit -u root --privileged --ipc=host \
     --name 'qwen3_14b_lora' \
     --device=/dev/davinci0 \
     --device=/dev/davinci1 \
@@ -133,7 +133,7 @@ docker run -dit -u root --ipc=host --network host --privileged \
     --device=/dev/davinci_manager \
     --device=/dev/devmm_svm \
     --device=/dev/hisi_hdc \
-    -p 50000:3000 \
+    -p 50001:3000 \
     -v /usr/local/Ascend/driver:/usr/local/Ascend/driver \
     -v /usr/local/Ascend/firmware:/usr/local/Ascend/firmware \
     -v /usr/local/Ascend/add-ons/:/usr/local/Ascend/add-ons/ \
@@ -145,7 +145,10 @@ docker run -dit -u root --ipc=host --network host --privileged \
     a3_llm:v2.1.0 bash
 ```
 
+> 增加 --network host 可以映射使用主机网络
+
 ## 三、预训练
+
 ### 3.1 权重转换
 
 昇腾MindSpeed-LLM要求模型权重采用Megatron-LM格式，在这里我们将原始HuggingFace权重格式转换为Megatron-Mcore格式。
@@ -164,6 +167,8 @@ bash examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 # 生效 ascend-toolkit 环境变量
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 
 # 设置需要的权重转换参数
 python convert_ckpt.py \
@@ -175,7 +180,7 @@ python convert_ckpt.py \
     --target-pipeline-parallel-size 4 \
     --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
     --load-dir /apps/hw/weights/Qwen3-14B/ \
-    --save-dir /apps/hw/outputs/qwen3/model_weights/qwen3_14b_mcore_tp2pp4/ \
+    --save-dir /apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
     --tokenizer-model /apps/hw/weights/Qwen3-14B/tokenizer.json \
     --params-dtype bf16 \
     --model-type-hf qwen3
@@ -365,6 +370,45 @@ TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开�
 
 - 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
 - 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
+
+### 3.5 权重MG转为HF
+
+修改转换脚本 ckpt_convert_qwen3_mcore2hf.sh
+
+```
+vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_pretrain.sh
+```
+
+将 Lora权重 合并转换为HF权重的示例参数：
+
+```shell
+# 生效 ascend-toolkit 环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+python convert_ckpt.py \
+    --use-mcore-models \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type hf \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 4 \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --load-dir /apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/ \
+    --save-dir /apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4_2hf/ \
+    --params-dtype bf16 \
+    --model-type-hf qwen3 \
+    --tokenizer-model /apps/hw/weights/Qwen3-14B/tokenizer.json 
+```
+
+>  关键参数： --save-model-type hf 
+
+```shell
+bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_pretrain.sh
+```
+
+
 
 ## 四、SFT微调
 
