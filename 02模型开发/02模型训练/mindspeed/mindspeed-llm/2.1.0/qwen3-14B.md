@@ -392,22 +392,25 @@ python convert_ckpt.py \
     --model-type GPT \
     --load-model-type mg \
     --save-model-type hf \
-    --target-tensor-parallel-size 2 \
-    --target-pipeline-parallel-size 4 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
     --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
     --load-dir /apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/ \
-    --save-dir /apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4_2hf/ \
+    --save-dir /apps/hw/weights/Qwen3-14B/ \
     --params-dtype bf16 \
     --model-type-hf qwen3
 ```
 
->  关键参数： --save-model-type hf 
+>  关键参数： 
+>
+>  * --save-model-type参数设置为 hf 
+>
+>  * save-dir 参数设置为原始hf权重的路径，脚本执行后，会在该目录下生成mg2hf的目录存放转换后的权重。
+>  * tp和pp都设置为1：  --target-tensor-parallel-size 1 ， --target-pipeline-parallel-size 1 
 
 ```shell
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_pretrain.sh
 ```
-
-
 
 ## 四、SFT微调
 
