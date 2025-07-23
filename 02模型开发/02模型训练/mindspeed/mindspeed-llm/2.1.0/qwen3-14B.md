@@ -905,45 +905,7 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
-### 5.4 权重从mcore转为HF(有问题，不通)
-
-修改转换脚本 ckpt_convert_qwen3_mcore2hf.sh
-
-```
-vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh
-```
-
-将 Lora权重 合并转换为HF权重的示例参数：
-
-```shell
-# 生效 ascend-toolkit 环境变量
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
-export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
-
-python convert_ckpt.py \
-    --use-mcore-models \
-    --model-type GPT \
-    --load-model-type mg \
-    --save-model-type hf \
-    --target-tensor-parallel-size 2 \
-    --target-pipeline-parallel-size 4 \
-    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
-    --load-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/ \
-    --save-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge2hf/ \
-    --params-dtype bf16 \
-    --model-type-hf qwen3
-```
-
->  关键参数： --save-model-type hf 
-
-```shell
-bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh
-```
-
-报错
-
-### 5.5 lora权重合并转换为 HuggingFace 权重(有问题，不通)
+### 5.5 lora权重合并后转换为HF权重
 
 若希望将lora权重合并转换为 Hugging Face（HF）格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
 
@@ -964,19 +926,22 @@ python convert_ckpt.py \
     --model-type GPT \
     --load-model-type mg \
     --save-model-type hf \
-    --target-tensor-parallel-size 2 \
-    --target-pipeline-parallel-size 4 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
     --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
     --lora-r 16 \
     --lora-alpha 32 \
     --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
     --load-dir /apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
     --lora-load /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4/ \
-    --save-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_hf_tp2pp4_merge/ \
+    --save-dir /apps/hw/weights/Qwen3-14B/ \
     --model-type-hf qwen3
 ```
 
->  关键参数： --save-model-type hf 
+>  * --save-model-type参数设置为 hf
+>
+>  * save-dir 参数设置为原始hf权重的路径，脚本执行后，会在该目录下生成mg2hf的目录存放转换后的权重。
+>  * tp和pp都设置为1：  --target-tensor-parallel-size 1 ， --target-pipeline-parallel-size 1 
 
 **注意：** `lora` 参数的值应与微调时的参数设置保持一致，以确保转换后的模型具有相同的性能表现和兼容性。
 
@@ -985,10 +950,6 @@ python convert_ckpt.py \
 ```shell
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
-
-报错
-
-![image-20250721172751799](qwen3-14B.assets/image-20250721172751799.png)
 
 ### 5.5 LoRA 推理
 
