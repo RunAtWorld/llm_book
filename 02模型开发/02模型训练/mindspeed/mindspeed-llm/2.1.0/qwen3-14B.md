@@ -781,7 +781,7 @@ SEQ_LENGTH=4096
 Alpaca风格数据集Lora 微调处理和SFT微调数据集处理方式相同。
 
 ### 5.2 Lora微调训练
-修改单机微调脚本 tune_qwen3_14b_4K_full_ptd.sh 
+修改单机lora微调脚本 tune_qwen3_14b_4K_lora_ptd.sh
 
 ```
 vim examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh
