@@ -113,7 +113,7 @@ docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  qwen3_14b a3_ll
 
 ```bash
 docker run -dit -u root --privileged --ipc=host \
-    --name 'qwen3_14b_lora' \
+    --name 'qwen3_14b_pretrain' \
     --device=/dev/davinci0 \
     --device=/dev/davinci1 \
     --device=/dev/davinci2 \
@@ -133,7 +133,7 @@ docker run -dit -u root --privileged --ipc=host \
     --device=/dev/davinci_manager \
     --device=/dev/devmm_svm \
     --device=/dev/hisi_hdc \
-    -p 50001:3000 \
+    -p 50002:3000 \
     -v /usr/local/Ascend/driver:/usr/local/Ascend/driver \
     -v /usr/local/Ascend/firmware:/usr/local/Ascend/firmware \
     -v /usr/local/Ascend/add-ons/:/usr/local/Ascend/add-ons/ \
@@ -482,7 +482,7 @@ bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_pretrain.sh
     <assistant>: 强化学习是一种让智能体通过试错方式学习策略的方法。
     ```
 
-### 4.2 使用Alpaca数据集 SFT 微调
+### 4.2 使用Alpaca数据集
 
 #### 4.2.1 Alpaca数据集
 
@@ -591,7 +591,188 @@ alpaca_packed_labels_document.idx
 
 ##### 4.2.2.3 Alpaca多轮对话数据处理
 
-#### 4.2.3 SFT微调训练
+### 4.3  使用ShareGPT数据集
+
+#### 4.3.1 对话指令微调数据集
+
+常用的对话指令微调数据集有：
+
+- [Roleplay多轮对话：ShareGPT数据集](https://huggingface.co/datasets/shibing624/roleplay-zh-sharegpt-gpt4-data)
+- [Chain-of-though: ShareGPT数据集](https://huggingface.co/datasets/isaiahbjork/chain-of-thought-sharegpt)
+- [Capybara: ShareGPT数据集](https://huggingface.co/datasets/Undi95/Capybara-ShareGPT)
+
+`ShareGPT` 风格微调数据集下载可以基于网页直接下载，也可以基于命令行下载，比如：
+
+```shell
+wget https://huggingface.co/datasets/shibing624/roleplay-zh-sharegpt-gpt4-data/resolve/main/sharegpt_formatted_data-evol-gpt4.jsonl
+```
+
+#### 4.3.2 ShareGPT风格数据集处理
+
+`ShareGPT` 格式支持更多的角色种类，例如 `human、gpt、observation、function`等等。它们构成一个对象列表呈现在`conversations`列中。
+
+`ShareGPT`风格示例：
+
+```
+[
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "人类指令"
+      },
+      {
+        "from": "function_call",
+        "value": "工具参数"
+      },
+      {
+        "from": "observation",
+        "value": "工具结果"
+      },
+      {
+        "from": "gpt",
+        "value": "模型回答"
+      }
+    ],
+    "system": "系统提示词（选填）",
+    "tools": "工具描述（选填）"
+  }
+]
+```
+
+`ShareGPT`格式数据预处理示例脚本：
+
+```shell
+# 请按照您的真实环境 source set_env.sh 环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+mkdir ./finetune_dataset
+
+python ./preprocess_data.py \
+    --input ./dataset/sharegpt_formatted_data-evol-gpt4.jsonl \
+    --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
+    --output-prefix ./finetune_dataset/sharegpt \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF \
+    --handler-name SharegptStyleInstructionHandler \
+    --prompt-type llama2  # <-- 需要填入模型模板
+    # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
+```
+
+* `--prompt-type`: 用于指定模型模板，能够让base模型微调后能具备更好的对话能力。`prompt-type`的可选项可以在[templates](../../../../../configs/finetune/templates.json)文件内查看。
+* `--map-keys`:参数用于配置字段映射来使用数据集。默认值为
+
+    ```
+    '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}'
+    ```
+
+    其中key值`"messages"、"tags"`代表数据集列映射后的属性，在代码中是固定的，不应改变。value值中`"conversations"`对应数据集的列名、`"from"`对应角色标志、`"human"、"gpt"、"system"、"observation"、"function_call"`对应角色种类、`"value"`对应具体内容标志。
+
+    以OpenAI格式为例，OpenAI 格式是 sharegpt 格式的一种特殊情况，其中第一条消息可能是系统提示词。OpenAI格式示例：
+    ```
+    [
+    {
+        "messages": [
+        {
+            "role": "system",
+            "content": "系统提示词（选填）"
+        },
+        {
+            "role": "user",
+            "content": "人类指令"
+        },
+        {
+            "role": "assistant",
+            "content": "模型回答"
+        }
+        ]
+    }
+    ]
+    ```
+
+    OpenAI格式数据预处理示例脚本：
+
+    ```shell
+    # 请按照您的真实环境 source set_env.sh 环境变量
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    mkdir ./finetune_dataset
+
+    python ./preprocess_data.py \
+        --input ./dataset/xxx.json \
+        --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
+        --output-prefix ./finetune_dataset/openai \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name SharegptStyleInstructionHandler \
+        --prompt-type llama2 \
+        --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
+    ```
+
+* `--handler-name`: 微调数据预处理`ShareGPT`风格数据集时，应指定为`SharegptStyleInstructionHandler`，并根据`--map-keys`参数提取对应数据的列。
+
+    **示例1：**
+
+    ```
+    --map-keys '{"messages":"chat"}'
+    ```
+
+    则会提取数据集里的`"chat"`列，其中`"tags"`属性包含角色格式和内容格式，做为默认值隐式存在，角色格式可以为：`"from": "human"、"from": "gpt"、"from": "observation"、"from": "function_call"`，内容格式为`"value": "具体内容"`
+
+    **示例2：**
+
+    ```
+    --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant"}}'
+    ```
+
+    则会提取数据集里的`"messages"`列，其中角色格式可以为：`"role": "user"、"role": "assistant"`，内容格式为`"content": "具体内容"`
+
+#### 4.3.3 转换启动脚本
+
+对数据集处理脚本 data_convert_qwen3_instruction.sh 中的配置进行修改：
+
+```
+cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh examples/mcore/qwen3/data_convert_qwen3_instruction_sharegpt.sh
+vim examples/mcore/qwen3/data_convert_qwen3_instruction_sharegpt.sh
+```
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+mkdir -p /apps/hw/outputs/qwen3/finetune_dataset_sharegpt
+python ./preprocess_data.py \
+    --input  /apps/hw/datasets/roleplay-zh-sharegpt-gpt4-data/sharegpt_formatted_data-evol-gpt4.jsonl \
+    --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
+    --output-prefix /apps/hw/outputs/qwen3/finetune_dataset_sharegpt/sharegpt \
+    --handler-name SharegptStyleInstructionHandler \
+    --tokenizer-type PretrainedFromHF \
+    --workers 4 \
+    --log-interval 1000 \
+    --prompt-type qwen
+    # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
+```
+
+修改后，执行脚本
+
+```
+bash examples/mcore/qwen3/data_convert_qwen3_instruction_sharegpt.sh
+```
+
+指令微调数据集处理结果如下：
+
+```shell
+sharegpt_packed_attention_mask_document.bin
+sharegpt_packed_attention_mask_document.idx
+sharegpt_packed_input_ids_document.bin
+sharegpt_packed_input_ids_document.idx
+sharegpt_packed_labels_document.bin
+sharegpt_packed_labels_document.idx
+```
+
+### 4.4 SFT微调训练
 
 修改单机微调脚本 tune_qwen3_14b_4K_full_ptd.sh 
 
@@ -682,7 +863,7 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
 最后确保每台机器上的模型路径和数据集路径等无误后，在多个终端上同时启动预训练脚本即可开始训练。
 
-### 4.2.4 推理验证
+### 4.5 推理验证
 
 完成微调后，需要进一步验证模型是否具备了预期的输出能力。我们提供了简单的模型生成脚本，只需要加载微调后的模型权重，便可观察模型在不同生成参数配置下的回复。
 
@@ -724,7 +905,9 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
 ```
 
-### 4.2.5 mmlu推理评估
+### 4.6 评测集验证
+
+#### 4.6.1 mmlu推理评估
 
 使用评估脚本  generate_qwen3_14b_ptd.sh
 
@@ -746,7 +929,7 @@ export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-pa
 # please fill these path configurations
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 CHECKPOINT="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"
-DATA_PATH="/apps/hw/datasets/mmlu"
+DATA_PATH="/apps/hw/datasets/mmlu/data"
 TASK="mmlu"
 
 # 基础配置
@@ -1033,4 +1216,134 @@ LoRA权重推理评估方法和SFT中mmlu推理评估方法相同。
 | `--model-type-hf`                 | huggingface模型类别，默认为llama2                            |      |
 | `--params-dtype`                  | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅    |
 | `--tensorboard-dir`               | 指定tensorboard的事件存储目录，如` ./tb `。查看训练loss曲线使用方法为 `tensorboard --logdir=./tb --port=6007` |      |
+
+## 七、业务数据集调测
+
+### 7.1 全参微调训练
+
+#### 7.1.1 转换数据集
+
+原始数据集目录： /apps/hw/datasets/midea_dataset/midea_datasets_sft
+
+对`ShareGPT`格式数据数据集处理脚本 data_convert_qwen3_instruction.sh 中的配置进行修改：
+
+```
+cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh examples/mcore/qwen3/data_convert_qwen3_instruction_midea_sharegpt10k.sh
+vim examples/mcore/qwen3/data_convert_qwen3_instruction_midea_sharegpt10k.sh
+```
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+mkdir -p /apps/hw/outputs/qwen3/finetune_dataset_midea_sharegpt10k
+python ./preprocess_data.py \
+    --input  /apps/hw/datasets/midea_dataset/midea_datasets_sft/intent_train_10k.jsonl \
+    --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
+    --output-prefix /apps/hw/outputs/qwen3/finetune_dataset_midea_sharegpt10k/openai \
+    --handler-name SharegptStyleInstructionHandler \
+    --tokenizer-type PretrainedFromHF \
+    --workers 4 \
+    --log-interval 1000 \
+    --prompt-type qwen \
+    --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
+```
+
+修改后，执行脚本
+
+```
+bash examples/mcore/qwen3/data_convert_qwen3_instruction_midea_sharegpt10k.sh
+```
+
+指令微调数据集处理结果如下：
+
+```shell
+openai_packed_attention_mask_document.bin
+openai_packed_attention_mask_document.idx
+openai_packed_input_ids_document.bin
+openai_packed_input_ids_document.idx
+openai_packed_labels_document.bin
+openai_packed_labels_document.idx
+```
+
+#### 7.1.2 全参微调训练
+
+修改单机微调脚本 tune_qwen3_14b_4K_full_ptd.sh 
+
+```
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh  examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd_midea.sh 
+vim examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd_midea.sh 
+```
+
+示例脚本内容如下：
+
+
+```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
+export HCCL_NPU_SOCKET_PORT_RANGE="auto" 
+export HCCL_PORT_RANGE="7015-7200"
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_sft/midea_qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset_midea_sharegpt10k/openai"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
+
+TP=2
+PP=4
+MBS=1
+GBS=16
+SEQ_LENGTH=4096
+TRAIN_ITERS=1000 #训练1000步
+
+...
+
+DATA_ARGS="
+    --data-path $DATA_PATH \
+    --split 100,0,0
+"
+
+OUTPUT_ARGS="
+    --log-interval 1 \
+    --save-interval ${TRAIN_ITERS} \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --log-throughput
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --prompt-type qwen \
+    --variable-seq-lengths
+"
+```
+
+微调脚本相关参数说明
+
+- `DATA_PATH`：数据集路径。请注意实际数据预处理生成文件末尾会增加`_input_ids_document`等后缀，该参数填写到数据集的前缀即可。例如实际的数据集相对路径是`./finetune_dataset/alpaca/alpaca_packed_input_ids_document.bin`等，那么只需要填`./finetune_dataset/alpaca/alpaca`即可。
+- `is-instruction-dataset`：用于指定微调过程中采用指令微调数据集，以确保模型依据特定指令数据进行微调。
+- `variable-seq-lengths`：在不同的mini-batch间支持以动态的序列长度进行微调，默认padding到`8`的整数倍，可以通过`pad-to-multiple-of`参数来修改padding的倍数。假设微调时指定`--seq-length`序列长度为1024，开启`--variable-seq-lengths`后，序列长度会padding到真实数据长度的8整数倍。如下图所示：  ![variable_seq_lengths](qwen3-14B.assets/variable_seq_lengths-17529189902421.png)
+
+* `--save-interval` 多少步存一次ckpt
+
+如果是单机运行场景，只需要在一台机器上启动微调脚本：
+
+```bash
+bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
+```
 
