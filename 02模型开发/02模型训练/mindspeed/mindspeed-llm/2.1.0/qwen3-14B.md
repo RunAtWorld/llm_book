@@ -1219,7 +1219,7 @@ LoRA权重推理评估方法和SFT中mmlu推理评估方法相同。
 
 ## 七、业务数据集调测
 
-### 7.1 全参微调训练
+### 7.1 微调训练
 
 #### 7.1.1 转换数据集
 
@@ -1347,3 +1347,210 @@ TUNE_ARGS="
 bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
 ```
 
+#### 7.1.3 全参微调推理验证
+
+完成微调后，需要进一步验证模型是否具备了预期的输出能力。只需要加载微调后的模型权重，便可观察模型在不同生成参数配置下的回复。
+
+修改推理脚本  generate_qwen3_14b_ptd.sh
+
+```
+cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh examples/mcore/qwen3/midea_generate_qwen3_14b_ptd.sh
+vim examples/mcore/qwen3/midea_generate_qwen3_14b_ptd.sh
+```
+
+修改以下参数：
+
+```bash
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
+export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+# please fill these path configurations
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft/midea_qwen3_14b_mcore_tp2pp4/" # 指向微调后权重的保存路径
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+
+# Change for multinode config
+MASTER_ADDR=localhost
+MASTER_PORT=6000
+NNODES=1 # 集群里的节点数，以实际情况填写,
+NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+NPUS_PER_NODE=8
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+然后运行推理脚本：
+
+```bash
+bash examples/mcore/qwen3/midea_generate_qwen3_14b_ptd.sh
+```
+
+![image-20250725170604384](qwen3-14B.assets/image-20250725170604384.png)
+
+#### 7.1.4 lora微调训练
+
+##### 7.1.4.1 启动lora微调
+
+修改单机lora微调脚本 tune_qwen3_14b_4K_lora_ptd.sh
+
+```
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh  examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd_midea.sh 
+vim examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd_midea.sh 
+```
+
+示例脚本内容如下：
+
+```shell
+# 初始化环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+source /usr/local/Ascend/nnal/atb/set_env.sh
+export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+export HCCL_CONNECT_TIMEOUT=1800 #定义HCCL建立链接的超时时间。
+export CUDA_DEVICE_MAX_CONNECTIONS=1  #定义了任务流能够利用或映射到的硬件队列的数量。
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_lora/midea_qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset_midea_sharegpt10k/openai"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径4
+TP=2
+PP=4
+SEQ_LENGTH=4096
+TRAIN_ITERS=2000
+
+...
+
+OUTPUT_ARGS="
+    --load ${CKPT_LOAD_DIR} \
+    --save ${CKPT_SAVE_DIR} \
+    --log-interval 1 \
+    --save-interval ${TRAIN_ITERS} \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --no-load-optim \
+    --no-load-rng
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --tokenizer-not-use-fast \
+    --prompt-type qwen \
+#    --variable-seq-lengths \ #不设置动态长度，便于对精度
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-fusion \
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2
+"
+```
+
+参数说明：
+
+- **`--load`**:  若不指定该参数加载权重，模型会随机初始化权重。
+- **`--prompt-type`**:  指定模型模板，使 base 模型在微调后具备更好的对话能力。
+- **`--variable-seq-lengths`**:  支持动态序列长度微调，默认按 8 的倍数进行 padding，可以通过 `--pad-to-multiple-of` 参数修改 padding 的倍数。
+- **`--lora-r`**:  LoRA rank，表示低秩矩阵的维度。较低的 rank 值模型在训练时会使用更少的参数更新，从而减少计算量和内存消耗。然而，过低的 rank 可能限制模型的表达能力。
+- **`--lora-alpha`**:  控制 LoRA 权重对原始权重的影响比例, 数值越高则影响越大。一般保持 `α/r` 为 2。
+- **`--lora-fusion`**:  是否启用<a href="https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/features/cc_lora.md">CCLoRA</a>算法，该算法通过计算通信掩盖提高性能。
+- **`--lora-target-modules`**:  选择需要添加 LoRA 的模块。  *mcore 模型可选模块：* `linear_qkv`, `linear_proj`, `linear_fc1`, `linear_fc2`
+- **`--lora-load`**:  加载 LoRA 权重断点继续训练或用于推理。在推理时需与 `--load` 参数配合使用，加载 `CKPT_SAVE_DIR` 路径下的 LoRA 权重。
+
+##### 7.1.4.2 lora权重合并
+
+修改合并脚本 ckpt_convert_qwen3_mcore2mcore_lora.sh
+
+```
+cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh examples/mcore/qwen3/midea_ckpt_convert_qwen3_mcore2mcore_lora.sh
+vim examples/mcore/qwen3/midea_ckpt_convert_qwen3_mcore2mcore_lora.sh
+```
+
+将 Lora权重 合并转换为 Mcore 权重的示例参数：
+
+```shell
+# 生效 ascend-toolkit 环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+python convert_ckpt.py \
+    --use-mcore-models \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 4 \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
+    --load-dir /apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
+    --lora-load /apps/hw/outputs/qwen3/14b/save_weights_lora/midea_qwen3_14b_mcore_tp2pp4/ \
+    --save-dir /apps/hw/outputs/qwen3/14b/save_weights_lora/midea_qwen3_14b_mcore_tp2pp4_merge/ \
+    --model-type-hf qwen3
+```
+
+启动转换脚本：
+
+```shell
+bash examples/mcore/qwen3/midea_ckpt_convert_qwen3_mcore2mcore_lora.sh
+```
+
+#### 7.1.5 lora微调推理验证
+
+修改推理脚本  generate_qwen3_14b_ptd.sh
+
+```
+cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh examples/mcore/qwen3/midea_generate_qwen3_14b_lora_ptd.sh
+vim examples/mcore/qwen3/midea_generate_qwen3_14b_lora_ptd.sh
+```
+
+修改以下参数：
+
+```bash
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
+export HCCL_IF_BASE_PORT=30000 #设置HCCL端口
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+# please fill these path configurations
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_lora/midea_qwen3_14b_mcore_tp2pp4_merge/" # 指向微调后权重的保存路径
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+
+# Change for multinode config
+MASTER_ADDR=localhost
+MASTER_PORT=6000
+NNODES=1 # 集群里的节点数，以实际情况填写,
+NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+NPUS_PER_NODE=8
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+然后运行推理脚本：
+
+```bash
+bash examples/mcore/qwen3/midea_generate_qwen3_14b_lora_ptd.sh
+```
+
+![image-20250725181626268](qwen3-14B.assets/image-20250725181626268.png)
