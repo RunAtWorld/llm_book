@@ -1,4 +1,4 @@
-# Qwen3-14B适配
+Qwen3-14B适配
 
 ## 一、依赖安装&制作镜像
 
@@ -1424,9 +1424,9 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 ```
 
-评测结果如下
+评测结果如下，准确率0.941
 
-![image-20250728165733270](qwen3-14B.assets/image-20250728165733270.png)
+![image-20250728175337223](qwen3-14B.assets/image-20250728175337223.png)
 
 #### 7.1.5 lora微调训练
 
@@ -1623,5 +1623,6 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/qwen3_14b_lora_ptd_eval_midea_dataset.sh
 ```
 
-评测结果如下
+评测结果如下，准确率0.93
 
+![image-20250728175212530](qwen3-14B.assets/image-20250728175212530.png)
