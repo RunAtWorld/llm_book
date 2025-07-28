@@ -1221,7 +1221,7 @@ LoRA权重推理评估方法和SFT中mmlu推理评估方法相同。
 
 ### 7.1 微调训练
 
-#### 7.1.1 转换数据集
+#### 7.1.1 转换微调数据集
 
 原始数据集目录： /apps/hw/datasets/midea_dataset/midea_datasets_sft
 
@@ -1426,6 +1426,8 @@ bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 
 评测结果如下
 
+![image-20250728165733270](qwen3-14B.assets/image-20250728165733270.png)
+
 #### 7.1.5 lora微调训练
 
 ##### 7.1.5.1 启动lora微调
@@ -1546,8 +1548,6 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/midea_ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
-
-
 ##### 7.1.5.3 lora微调推理验证
 
 修改推理脚本  generate_qwen3_14b_ptd.sh
@@ -1592,3 +1592,36 @@ bash examples/mcore/qwen3/midea_generate_qwen3_14b_lora_ptd.sh
 ![image-20250725181626268](qwen3-14B.assets/image-20250725181626268.png)
 
 ##### 7.1.5.4 lora微调评测
+
+修改qwen3_14b_lora_ptd_eval_midea_dataset.sh脚本：
+
+```
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft/midea_qwen3_14b_mcore_tp2pp4/" # 指向微调后权重的保存路径
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+
+# Change for multinode config
+MASTER_ADDR=localhost
+MASTER_PORT=6000
+NNODES=1 # 集群里的节点数，以实际情况填写,
+NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+NPUS_PER_NODE=8
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+> tips: 评测脚本和全参微调评测脚本一致，只需要修改权重路径
+
+然后运行评测脚本：
+
+```bash
+bash examples/mcore/qwen3/qwen3_14b_lora_ptd_eval_midea_dataset.sh
+```
+
+评测结果如下
+
