@@ -848,6 +848,10 @@ TUNE_ARGS="
 bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
 ```
 
+tensorboard监控微调loss下降结果如下：
+
+![image-20250728181840558](qwen3-14B.assets/image-20250728181840558.png)
+
 如果是多机运行，则需要在单机的脚本上修改以下参数：
 
 ```shell
@@ -1037,6 +1041,10 @@ TUNE_ARGS="
 - **`--lora-fusion`**:  是否启用<a href="https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/features/cc_lora.md">CCLoRA</a>算法，该算法通过计算通信掩盖提高性能。
 - **`--lora-target-modules`**:  选择需要添加 LoRA 的模块。  *mcore 模型可选模块：* `linear_qkv`, `linear_proj`, `linear_fc1`, `linear_fc2`
 - **`--lora-load`**:  加载 LoRA 权重断点继续训练或用于推理。在推理时需与 `--load` 参数配合使用，加载 `CKPT_SAVE_DIR` 路径下的 LoRA 权重。
+
+tensorboard监控微调loss下降结果如下：
+
+![image-20250728182657139](qwen3-14B.assets/image-20250728182657139.png)
 
 ### 5.3 Lora权重与Base权重的合并
 
@@ -1349,6 +1357,10 @@ TUNE_ARGS="
 bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
 ```
 
+tensorboard监控微调loss下降结果如下：
+
+![image-20250728181723712](qwen3-14B.assets/image-20250728181723712.png)
+
 ##### 7.1.2.2 全参微调推理验证
 
 完成微调后，需要进一步验证模型是否具备了预期的输出能力。只需要加载微调后的模型权重，便可观察模型在不同生成参数配置下的回复。
@@ -1507,6 +1519,10 @@ TUNE_ARGS="
 - **`--lora-fusion`**:  是否启用<a href="https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/features/cc_lora.md">CCLoRA</a>算法，该算法通过计算通信掩盖提高性能。
 - **`--lora-target-modules`**:  选择需要添加 LoRA 的模块。  *mcore 模型可选模块：* `linear_qkv`, `linear_proj`, `linear_fc1`, `linear_fc2`
 - **`--lora-load`**:  加载 LoRA 权重断点继续训练或用于推理。在推理时需与 `--load` 参数配合使用，加载 `CKPT_SAVE_DIR` 路径下的 LoRA 权重。
+
+tensorboard监控微调loss下降结果如下：
+
+![image-20250728181657240](qwen3-14B.assets/image-20250728181657240.png)
 
 ##### 7.1.5.2 lora权重合并
 
