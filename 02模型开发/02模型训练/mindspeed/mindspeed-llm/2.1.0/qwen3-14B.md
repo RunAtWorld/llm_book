@@ -1268,7 +1268,9 @@ openai_packed_labels_document.bin
 openai_packed_labels_document.idx
 ```
 
-#### 7.1.2 全参微调训练
+#### 7.1.2 全参微调
+
+##### 7.1.2.1 全参微调训练
 
 修改单机微调脚本 tune_qwen3_14b_4K_full_ptd.sh 
 
@@ -1347,7 +1349,7 @@ TUNE_ARGS="
 bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
 ```
 
-#### 7.1.3 全参微调推理验证
+##### 7.1.2.2 全参微调推理验证
 
 完成微调后，需要进一步验证模型是否具备了预期的输出能力。只需要加载微调后的模型权重，便可观察模型在不同生成参数配置下的回复。
 
@@ -1392,9 +1394,41 @@ bash examples/mcore/qwen3/midea_generate_qwen3_14b_ptd.sh
 
 ![image-20250725170604384](qwen3-14B.assets/image-20250725170604384.png)
 
-#### 7.1.4 lora微调训练
+##### 7.1.2.3 全参微调评测
 
-##### 7.1.4.1 启动lora微调
+修改qwen3_14b_full_ptd_eval_midea_dataset.sh脚本：
+
+```
+# 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft/midea_qwen3_14b_mcore_tp2pp4/" # 指向微调后权重的保存路径
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+
+# Change for multinode config
+MASTER_ADDR=localhost
+MASTER_PORT=6000
+NNODES=1 # 集群里的节点数，以实际情况填写,
+NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+NPUS_PER_NODE=8
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+然后运行评测脚本：
+
+```bash
+bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
+```
+
+评测结果如下
+
+#### 7.1.5 lora微调训练
+
+##### 7.1.5.1 启动lora微调
 
 修改单机lora微调脚本 tune_qwen3_14b_4K_lora_ptd.sh
 
@@ -1472,7 +1506,7 @@ TUNE_ARGS="
 - **`--lora-target-modules`**:  选择需要添加 LoRA 的模块。  *mcore 模型可选模块：* `linear_qkv`, `linear_proj`, `linear_fc1`, `linear_fc2`
 - **`--lora-load`**:  加载 LoRA 权重断点继续训练或用于推理。在推理时需与 `--load` 参数配合使用，加载 `CKPT_SAVE_DIR` 路径下的 LoRA 权重。
 
-##### 7.1.4.2 lora权重合并
+##### 7.1.5.2 lora权重合并
 
 修改合并脚本 ckpt_convert_qwen3_mcore2mcore_lora.sh
 
@@ -1512,7 +1546,9 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/midea_ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
-#### 7.1.5 lora微调推理验证
+
+
+##### 7.1.5.3 lora微调推理验证
 
 修改推理脚本  generate_qwen3_14b_ptd.sh
 
@@ -1554,3 +1590,5 @@ bash examples/mcore/qwen3/midea_generate_qwen3_14b_lora_ptd.sh
 ```
 
 ![image-20250725181626268](qwen3-14B.assets/image-20250725181626268.png)
+
+##### 7.1.5.4 lora微调评测
