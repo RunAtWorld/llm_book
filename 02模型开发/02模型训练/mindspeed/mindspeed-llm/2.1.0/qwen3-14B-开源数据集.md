@@ -550,7 +550,8 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 使用推理脚本  generate_qwen3_14b_ptd.sh
 
 ```
-vim examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
+cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_train/
+vim midea_train/generate_qwen3_14b_ptd.sh
 ```
 
 修改以下参数：
@@ -578,7 +579,7 @@ SEQ_LENGTH=4096
 然后运行推理脚本：
 
 ```bash
-bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
+bash midea_train/generate_qwen3_14b_ptd.sh
 ```
 
 ### 4.6 评测集验证
@@ -588,7 +589,8 @@ bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
 使用评估脚本  generate_qwen3_14b_ptd.sh
 
 ```
-vim examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh
+cp examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh midea_train/
+vim midea_train/evaluate_qwen3_14b_ptd.sh
 ```
 
 修改以下参数：
@@ -598,7 +600,7 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到
 
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 CHECKPOINT="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"
-DATA_PATH="/apps/hw/datasets/mmlu/data"
+DATA_PATH="/apps/hw/datasets/mmlu/data/test"
 TASK="mmlu"
 
 # 基础配置
@@ -613,6 +615,16 @@ TP=2
 PP=4
 SEQ_LENGTH=4096
 ```
+
+运行脚本
+
+```
+bash midea_train/evaluate_qwen3_14b_ptd.sh
+```
+
+运行过程如下
+
+![image-20250729182459601](qwen3-14B-开源数据集.assets/image-20250729182459601.png)
 
 评估参数说明
 
@@ -636,10 +648,11 @@ Alpaca风格数据集Lora 微调处理和SFT微调数据集处理方式相同。
 修改单机lora微调脚本 tune_qwen3_14b_4K_lora_ptd.sh
 
 ```
-vim examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh midea_train/
+vim midea_train/tune_qwen3_14b_4K_lora_ptd.sh
 ```
 
-示例脚本内容如下：
+脚本内容如下：
 
 ```shell
 export CUDA_DEVICE_MAX_CONNECTIONS=1  #定义了任务流能够利用或映射到的硬件队列的数量。
@@ -688,6 +701,20 @@ TUNE_ARGS="
     --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2
 "
 ```
+运行脚本
+
+```
+bash midea_train/tune_qwen3_14b_4K_lora_ptd.sh
+```
+
+训练日志如下：
+
+![image-20250729181629481](qwen3-14B-开源数据集.assets/image-20250729181629481.png)
+
+tensorboard监控微调loss下降结果如下：
+
+![image-20250728182657139](qwen3-14B.assets/image-20250728182657139.png)
+
 参数说明：
 
 - **`--load`**:  若不指定该参数加载权重，模型会随机初始化权重。
@@ -698,10 +725,6 @@ TUNE_ARGS="
 - **`--lora-fusion`**:  是否启用<a href="https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/features/cc_lora.md">CCLoRA</a>算法，该算法通过计算通信掩盖提高性能。
 - **`--lora-target-modules`**:  选择需要添加 LoRA 的模块。  *mcore 模型可选模块：* `linear_qkv`, `linear_proj`, `linear_fc1`, `linear_fc2`
 - **`--lora-load`**:  加载 LoRA 权重断点继续训练或用于推理。在推理时需与 `--load` 参数配合使用，加载 `CKPT_SAVE_DIR` 路径下的 LoRA 权重。
-
-tensorboard监控微调loss下降结果如下：
-
-![image-20250728182657139](qwen3-14B.assets/image-20250728182657139.png)
 
 ### 5.3 Lora权重与Base权重的合并
 
@@ -717,7 +740,8 @@ tensorboard监控微调loss下降结果如下：
 修改合并脚本 ckpt_convert_qwen3_mcore2mcore_lora.sh
 
 ```
-vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
+cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh midea_train/ckpt_convert_qwen3_mcore2mcore_lora.sh
+vim midea_train/ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
 将 Lora权重 合并转换为 Mcore 权重的示例参数：
@@ -745,15 +769,16 @@ python convert_ckpt.py \
 启动转换脚本：
 
 ```shell
-bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
+bash midea_train/ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
-### 5.5 lora权重合并后转换为HF权重
+### 5.4 lora权重合并后转换为HF权重
 
 若希望将lora权重合并转换为Hugging Face格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
 
 ```
-vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
+cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh midea_train/
+vim midea_train/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
 
 将 Lora权重 合并转换为HF权重的示例参数：
@@ -786,7 +811,7 @@ python convert_ckpt.py \
 启动转换脚本：
 
 ```shell
-bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
+bash midea_train/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
 
 ### 5.5 LoRA 推理
@@ -796,7 +821,8 @@ bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 使用推理脚本  generate_qwen3_14b_ptd.sh
 
 ```
-vim examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
+cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_train/
+vim midea_train/generate_qwen3_14b_ptd.sh
 ```
 
 修改  `CHECKPOINT` 的权重路径为
@@ -819,7 +845,7 @@ SEQ_LENGTH=4096
 然后运行推理脚本：
 
 ```bash
-bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
+bash midea_train/generate_qwen3_14b_ptd.sh
 ```
 
 ### 5.6 LoRA权重推理评估
@@ -844,18 +870,20 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000
 修改脚本 data_convert_qwen3_pretrain.sh 
 
 ```
-vim examples/mcore/qwen3/data_convert_qwen3_pretrain.sh
+cp examples/mcore/qwen3/data_convert_qwen3_pretrain.sh midea_train/data_convert_qwen3_pretrain.sh
+vim midea_train/data_convert_qwen3_pretrain.sh
+mkdir -p /apps/hw/outputs/qwen3/pretrain_datasets_enwiki/
 ```
 
 配置做如下修改：
 
 ```shell
 python ./preprocess_data.py \
-    --input /apps/hw/datasets/train-00000-of-00042-d964455e17e96d5a.parquet \
+    --input /apps/hw/datasets/enwiki/train-00000-of-00042-d964455e17e96d5a.parquet \
     --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
     --tokenizer-type PretrainedFromHF \
     --handler-name GeneralPretrainHandler \
-    --output-prefix /apps/hw/outputs/qwen3/pretrain_datasets/enwiki \
+    --output-prefix /apps/hw/outputs/qwen3/pretrain_datasets_enwiki/enwiki \
     --json-keys text \
     --workers 4 \
     --log-interval 1000
@@ -864,8 +892,12 @@ python ./preprocess_data.py \
 启动转换
 
 ```
-bash examples/mcore/qwen3/data_convert_qwen3_pretrain.sh
+bash midea_train/data_convert_qwen3_pretrain.sh
 ```
+
+转换过程如下：
+
+![image-20250729184442769](qwen3-14B-开源数据集.assets/image-20250729184442769.png)
 
 参数解析
 
@@ -883,7 +915,8 @@ bash examples/mcore/qwen3/data_convert_qwen3_pretrain.sh
 打开脚本
 
 ```
-vim examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
+cp examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh midea_train/
+vim midea_train/pretrain_qwen3_14b_4K_ptd.sh
 ```
 
 示例脚本内容修改如下：
@@ -904,7 +937,7 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
 CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
 CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
-DATA_PATH="/apps/hw/outputs/qwen3/pretrain_datasets/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+DATA_PATH="/apps/hw/outputs/qwen3/pretrain_datasets_enwiki/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
 TP=2  #权重转换设置--target-tensor-parallel-size 2，修改为2
@@ -919,14 +952,14 @@ CP_TYPE='ulysses_cp_algo' #序列并行算法
 
 启动脚本
 ```shell
-bash examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh
+bash midea_train/pretrain_qwen3_14b_4K_ptd.sh
 ```
 
 训练日志如下：
 
 ![image-20250718113913675](qwen3-14B.assets/image-20250718113913675.png)
 
-脚本中特性包含训练参数也包含优化特性，如下部分参数解释
+脚本中特性包含部分参数解释
 
 | 参数名                                  | 说明                                                         |
 | --------------------------------------- | ------------------------------------------------------------ |
@@ -1006,4 +1039,4 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 | `--save-dir`                      | 权重文件保存路径                                             | ✅    |
 | `--model-type-hf`                 | huggingface模型类别，默认为llama2                            |      |
 | `--params-dtype`                  | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅    |
-| `--tensorboard-dir`               | 指定tensorboard的事件存储目录，如` ./tb `。查看训练loss曲线使用方法为 `tensorboard --logdir=./tb --port=6007` |      |
+| `--tensorboard-dir`               | 指定tensorboard的事件存储目录，如` ./tb `。查看训练loss曲线使用方法为 `tensorboard --logdir=./tb --port=3000` |      |

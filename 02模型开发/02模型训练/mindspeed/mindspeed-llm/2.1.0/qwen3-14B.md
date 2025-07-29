@@ -227,7 +227,15 @@ bash examples/mcore/qwen3/data_convert_qwen3_pretrain.sh
 ```
 data_convert_qwen3_pretrain.sh 中的配置需做如下修改：
 ```shell
-# 请按照您的真实环境修改 set_env.sh 路径
+python ./preprocess_data.py \
+    --input /apps/hw/datasets/enwiki/train-00000-of-00042-d964455e17e96d5a.parquet \
+    --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
+    --tokenizer-type PretrainedFromHF \
+    --handler-name GeneralPretrainHandler \
+    --output-prefix /apps/hw/outputs/qwen3/pretrain_datasets_enwiki/enwiki \
+    --json-keys text \
+    --workers 4 \
+    --log-interval 1000# 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
 export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
@@ -1045,6 +1053,14 @@ TUNE_ARGS="
     --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2
 "
 ```
+训练日志如下：
+
+![image-20250729181647243](qwen3-14B.assets/image-20250729181647243.png)
+
+tensorboard监控微调loss下降结果如下：
+
+![image-20250728182657139](qwen3-14B.assets/image-20250728182657139.png)
+
 参数说明：
 
 - **`--load`**:  若不指定该参数加载权重，模型会随机初始化权重。
@@ -1055,10 +1071,6 @@ TUNE_ARGS="
 - **`--lora-fusion`**:  是否启用<a href="https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/features/cc_lora.md">CCLoRA</a>算法，该算法通过计算通信掩盖提高性能。
 - **`--lora-target-modules`**:  选择需要添加 LoRA 的模块。  *mcore 模型可选模块：* `linear_qkv`, `linear_proj`, `linear_fc1`, `linear_fc2`
 - **`--lora-load`**:  加载 LoRA 权重断点继续训练或用于推理。在推理时需与 `--load` 参数配合使用，加载 `CKPT_SAVE_DIR` 路径下的 LoRA 权重。
-
-tensorboard监控微调loss下降结果如下：
-
-![image-20250728182657139](qwen3-14B.assets/image-20250728182657139.png)
 
 ### 5.3 Lora权重与Base权重的合并
 
@@ -1110,7 +1122,7 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
-### 5.5 lora权重合并后转换为HF权重
+### 5.4 lora权重合并后转换为HF权重
 
 若希望将lora权重合并转换为 Hugging Face（HF）格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
 
