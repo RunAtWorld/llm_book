@@ -329,11 +329,6 @@ python ./preprocess_data.py \
     # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
 ```
 
-执行 `ShareGPT`格式数据预处理脚本：
-```shell
-bash midea_train/data_convert_qwen3_instruction_sharegpt.sh
-```
-
 
 详细参数：
 
