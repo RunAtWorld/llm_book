@@ -186,6 +186,8 @@ python convert_ckpt.py \
     --model-type-hf qwen3
 ```
 
+![image-20250729164531346](qwen3-14B.assets/image-20250729164531346.png)
+
 参数解析
 
 | 参数                                  | 说明                                                         | 必填 |
@@ -412,6 +414,10 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_pretrain.sh
 ```
 
+运行日志如下
+
+![image-20250729170847637](qwen3-14B.assets/image-20250729170847637.png)
+
 ## 四、SFT微调
 
 ### 4.1 指令微调场景介绍
@@ -553,6 +559,10 @@ python ./preprocess_data.py \
 mkdir -p /apps/hw/outputs/qwen3/finetune_dataset
 bash examples/mcore/qwen3/data_convert_qwen3_instruction.sh
 ```
+
+转换日志如下：
+
+![image-20250729172451260](qwen3-14B.assets/image-20250729172451260.png)
 
 参数解析如下：
 

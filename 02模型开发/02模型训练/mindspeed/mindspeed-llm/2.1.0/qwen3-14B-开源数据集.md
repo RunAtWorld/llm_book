@@ -49,11 +49,12 @@ docker run -dit -u root --privileged --ipc=host \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
     -v /var/log/npu/conf/slog/slog.conf:/var/log/npu/conf/slog/slog.conf \
     -v /apps:/apps \
-    a3_llm:v2.1.0 bash
+    image.midea.com/caas/a3_llm_poc:v2.1.0 bash
 ```
 
 > * -p 50000:3000 暴露tensorboard端口
 > * 宿主机挂载的代码目录为：/apps/hw/src/llm-qwen3
+> * 进入容器时会生效 .bashrc 中的环境变量，所以需要等待几秒。
 
 ## 三、权重转换
 
@@ -65,7 +66,10 @@ docker run -dit -u root --privileged --ipc=host \
 使用转换脚本，获取对应切分的mg权重。
 
 ```bash
-vim examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh
+cd /apps/hw/src/llm-qwen3/MindSpeed-LLM
+mkdir midea_train
+cp examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh midea_train/
+vim midea_train/ckpt_convert_qwen3_hf2mcore.sh
 ```
 
 如下 ckpt_convert_qwen3_hf2mcore.sh 为调整后的hf2mcore权重转换示例脚本
@@ -93,9 +97,11 @@ python convert_ckpt.py \
 启动转换
 
 ```bash
-bash examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh
+bash midea_train/ckpt_convert_qwen3_hf2mcore.sh
 ```
 
+转换日志如下
+![image-20250729164517242](qwen3-14B-开源数据集.assets/image-20250729164517242.png)
 
 参数解析
 
@@ -118,12 +124,14 @@ bash examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh
 训练完成后，如果需要将MG权重转为HF权重，修改转换脚本 ckpt_convert_qwen3_mcore2hf.sh
 
 ```
-vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_pretrain.sh
+cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh midea_train/
+vim midea_train/ckpt_convert_qwen3_mcore2hf.sh
 ```
 
 将 Lora权重 合并转换为HF权重的示例参数：
 
 ```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
 python convert_ckpt.py \
     --use-mcore-models \
     --model-type GPT \
@@ -132,7 +140,7 @@ python convert_ckpt.py \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
-    --load-dir /apps/hw/outputs/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/ \
+    --load-dir /apps/hw/outputs/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4/ \
     --save-dir /apps/hw/weights/Qwen3-14B/ \
     --params-dtype bf16 \
     --model-type-hf qwen3
@@ -145,9 +153,14 @@ python convert_ckpt.py \
 >  * save-dir 参数设置为原始hf权重的路径，脚本执行后，会在该目录下生成mg2hf的目录存放转换后的权重。
 >  * tp和pp都设置为1：  --target-tensor-parallel-size 1 ， --target-pipeline-parallel-size 1 
 
+运行脚本
 ```shell
-bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_pretrain.sh
+bash midea_train/ckpt_convert_qwen3_mcore2hf.sh
 ```
+
+运行日志如下
+
+![image-20250729170830478](qwen3-14B-开源数据集.assets/image-20250729170830478.png)
 
 ## 四、全参微调
 
@@ -188,12 +201,11 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00
 
 在指令监督微调时，`instruction` 列对应的内容会与 `input` 列对应的内容拼接后作为人类指令，即人类指令为 `instruction\ninput`其中 `\n`为用于连接的换行符。而 `output` 列对应的内容为模型回答。如果指定了history，则会将历史对话内容也加入进来。如果指定system 列，则对应的内容将被作为系统提示词。
 
+```
+cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_train/data_convert_qwen3_instruction_alpaca.sh
+vim midea_train/data_convert_qwen3_instruction_alpaca.sh
+```
 对数据集处理脚本 data_convert_qwen3_instruction.sh 中的配置进行修改：
-
-```
-cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh examples/mcore/qwen3/data_convert_qwen3_instruction_alpaca.sh
-vim examples/mcore/qwen3/data_convert_qwen3_instruction_alpaca.sh
-```
 
 ```shell
 python ./preprocess_data.py \
@@ -211,9 +223,13 @@ python ./preprocess_data.py \
 修改后，执行脚本
 
 ```
-mkdir -p /apps/hw/outputs/qwen3/finetune_dataset
-bash examples/mcore/qwen3/data_convert_qwen3_instruction_alpaca.sh
+mkdir -p /apps/hw/outputs/qwen3/finetune_dataset_alpaca 
+bash midea_train/data_convert_qwen3_instruction_alpaca.sh
 ```
+
+转换日志如下
+
+![image-20250729172413389](qwen3-14B-开源数据集.assets/image-20250729172413389.png)
 
 参数解析如下：
 
@@ -298,7 +314,13 @@ wget https://huggingface.co/datasets/shibing624/roleplay-zh-sharegpt-gpt4-data/r
 ]
 ```
 
-`ShareGPT`格式数据预处理脚本：
+打开 `ShareGPT`格式数据预处理脚本：
+```shell
+cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_train/data_convert_qwen3_instruction_sharegpt.sh
+vim midea_train/data_convert_qwen3_instruction_sharegpt.sh
+```
+
+修改`ShareGPT`格式数据预处理脚本：
 
 ```shell
 python ./preprocess_data.py \
@@ -309,11 +331,30 @@ python ./preprocess_data.py \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name SharegptStyleInstructionHandler \
-    --prompt-type llama2  #需要填入模型模板
+    --prompt-type qwen #需要填入模型模板
     # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
 ```
 
-* `--prompt-type`: 用于指定模型模板，能够让base模型微调后能具备更好的对话能力。`prompt-type`的可选项可以在[templates](../../../../../configs/finetune/templates.json)文件内查看。
+执行 `ShareGPT`格式数据预处理脚本：
+```shell
+bash midea_train/data_convert_qwen3_instruction_sharegpt.sh
+```
+
+转换日志如下：
+
+![image-20250729173648524](qwen3-14B-开源数据集.assets/image-20250729173648524.png)
+
+转换后文件如下：
+
+```
+sharegpt_packed_attention_mask_document.bin     sharegpt_packed_attention_mask_document.idx 
+sharegpt_packed_input_ids_document.bin          sharegpt_packed_input_ids_document.idx  
+sharegpt_packed_labels_document.bin             sharegpt_packed_labels_document.idx
+```
+
+详细参数：
+
+* `--prompt-type`: 用于指定模型模板，能够让base模型微调后能具备更好的对话能力。`prompt-type`的可选项可以在[templates](https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/configs/finetune/templates.json)文件内查看。
 * `--map-keys`:参数用于配置字段映射来使用数据集。默认值为
 
     ```
@@ -716,7 +757,7 @@ bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
 
 ### 5.5 lora权重合并后转换为HF权重
 
-若希望将lora权重合并转换为 Hugging Face（HF）格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
+若希望将lora权重合并转换为Hugging Face格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
 
 ```
 vim examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
