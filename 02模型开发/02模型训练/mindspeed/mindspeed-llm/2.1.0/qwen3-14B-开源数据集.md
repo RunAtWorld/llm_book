@@ -976,7 +976,7 @@ bash midea_train/pretrain_qwen3_14b_4K_ptd.sh
 如果需要后台启动任务
 
 ```
-nohup bash examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh >pretrain_qwen3_14b_4K_ptd.log 2>&1 &
+nohup bash midea_train/pretrain_qwen3_14b_4K_ptd.sh >pretrain_qwen3_14b_4K_ptd.log 2>&1 &
 ```
 
 终止训练进程
