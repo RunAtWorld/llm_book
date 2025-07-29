@@ -49,7 +49,7 @@ docker run -dit -u root --privileged --ipc=host \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
     -v /var/log/npu/conf/slog/slog.conf:/var/log/npu/conf/slog/slog.conf \
     -v /apps:/apps \
-    image.midea.com/caas/a3_llm_poc:v2.1.0 bash
+    a3_llm_poc:v2.1.0 bash
 ```
 
 > * -p 50000:3000 暴露tensorboard端口
@@ -892,7 +892,7 @@ bash midea_train/data_convert_qwen3_pretrain.sh
 
 转换过程如下：
 
-![image-20250729184442769](qwen3-14B-开源数据集.assets/image-20250729184442769.png)
+![image-20250729225356220](qwen3-14B-开源数据集.assets/image-20250729225356220.png)
 
 参数解析
 
