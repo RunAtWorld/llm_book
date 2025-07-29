@@ -1,4 +1,4 @@
-Qwen3-14B适配
+# Qwen3-14B适配
 
 ## 一、依赖安装&制作镜像
 
@@ -91,7 +91,7 @@ pip install transformers==4.51.0
 所有依赖都安装后，可以将环境保存为镜像以便下次使用
 
 ```
-docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  qwen3_14b a3_llm:v2.1.0
+docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  qwen3_14b a3_llm_poc:v2.1.0
 ```
 
 以上安装后，相关组件配套表如下：
@@ -643,7 +643,7 @@ wget https://huggingface.co/datasets/shibing624/roleplay-zh-sharegpt-gpt4-data/r
 `ShareGPT`格式数据预处理示例脚本：
 
 ```shell
-# 请按照您的真实环境 source set_env.sh 环境变量
+# 请按照真实环境 source set_env.sh 环境变量
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 mkdir ./finetune_dataset
 
@@ -655,7 +655,7 @@ python ./preprocess_data.py \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name SharegptStyleInstructionHandler \
-    --prompt-type llama2  # <-- 需要填入模型模板
+    --prompt-type llama2  #需要填入模型模板
     # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
 ```
 
@@ -1836,7 +1836,7 @@ bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
 
 tensorboard监控微调loss下降结果如下：
 
-![image-20250728181723712](qwen3-14B.assets/image-20250728181723712.png)
+
 
 ##### 7.2.2.2 全参微调推理验证
 
@@ -1881,7 +1881,7 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/midea_generate_qwen3_14b_ptd.sh
 ```
 
-![image-20250725170604384](qwen3-14B.assets/image-20250725170604384.png)
+
 
 ##### 7.2.2.3 全参微调评测
 
@@ -1913,9 +1913,9 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 ```
 
-评测结果如下，准确率0.941
+评测结果如下，准确率
 
-![image-20250728175337223](qwen3-14B.assets/image-20250728175337223.png)
+
 
 #### 7.3.5 lora微调训练
 
@@ -1999,7 +1999,7 @@ TUNE_ARGS="
 
 tensorboard监控微调loss下降结果如下：
 
-![image-20250728181657240](qwen3-14B.assets/image-20250728181657240.png)
+
 
 ##### 7.2.5.2 lora权重合并
 
@@ -2082,7 +2082,7 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/midea_generate_qwen3_14b_lora_ptd.sh
 ```
 
-![image-20250725181626268](qwen3-14B.assets/image-20250725181626268.png)
+
 
 ##### 7.2.5.4 lora微调评测
 
@@ -2116,6 +2116,5 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/qwen3_14b_lora_ptd_eval_midea_dataset.sh
 ```
 
-评测结果如下，准确率0.93
+评测结果如下，准确率
 
-![image-20250728175212530](qwen3-14B.assets/image-20250728175212530.png)
