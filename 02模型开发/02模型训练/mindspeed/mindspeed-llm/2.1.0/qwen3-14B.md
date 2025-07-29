@@ -858,6 +858,10 @@ TUNE_ARGS="
 bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
 ```
 
+训练日志如下：
+
+![image-20250729174919503](qwen3-14B.assets/image-20250729174919503.png)
+
 tensorboard监控微调loss下降结果如下：
 
 ![image-20250728181840558](qwen3-14B.assets/image-20250728181840558.png)

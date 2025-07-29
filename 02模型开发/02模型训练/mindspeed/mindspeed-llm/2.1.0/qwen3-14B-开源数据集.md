@@ -314,12 +314,6 @@ wget https://huggingface.co/datasets/shibing624/roleplay-zh-sharegpt-gpt4-data/r
 ]
 ```
 
-打开 `ShareGPT`格式数据预处理脚本：
-```shell
-cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_train/data_convert_qwen3_instruction_sharegpt.sh
-vim midea_train/data_convert_qwen3_instruction_sharegpt.sh
-```
-
 修改`ShareGPT`格式数据预处理脚本：
 
 ```shell
@@ -340,17 +334,6 @@ python ./preprocess_data.py \
 bash midea_train/data_convert_qwen3_instruction_sharegpt.sh
 ```
 
-转换日志如下：
-
-![image-20250729173648524](qwen3-14B-开源数据集.assets/image-20250729173648524.png)
-
-转换后文件如下：
-
-```
-sharegpt_packed_attention_mask_document.bin     sharegpt_packed_attention_mask_document.idx 
-sharegpt_packed_input_ids_document.bin          sharegpt_packed_input_ids_document.idx  
-sharegpt_packed_labels_document.bin             sharegpt_packed_labels_document.idx
-```
 
 详细参数：
 
@@ -399,7 +382,7 @@ sharegpt_packed_labels_document.bin             sharegpt_packed_labels_document.
         --prompt-type llama2 \
         --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
     ```
-    
+
 * `--handler-name`: 微调数据预处理`ShareGPT`风格数据集时，应指定为`SharegptStyleInstructionHandler`，并根据`--map-keys`参数提取对应数据的列。
 
     **示例1：**
@@ -418,14 +401,14 @@ sharegpt_packed_labels_document.bin             sharegpt_packed_labels_document.
 
     则会提取数据集里的`"messages"`列，其中角色格式可以为：`"role": "user"、"role": "assistant"`，内容格式为`"content": "具体内容"`
 
-#### 4.2.3 转换启动脚本
+#### 4.2.3 启动转换脚本
 
-以sharegpt数据集为例，对数据集处理脚本的配置进行修改：
+**以sharegpt数据集为例**，对数据集处理脚本的配置进行修改：
 
 ```
-cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh examples/mcore/qwen3/data_convert_qwen3_instruction_sharegpt.sh
+cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_train/data_convert_qwen3_instruction_sharegpt.sh
 mkdir -p /apps/hw/outputs/qwen3/finetune_dataset_sharegpt
-vim examples/mcore/qwen3/data_convert_qwen3_instruction_sharegpt.sh
+vim midea_train/data_convert_qwen3_instruction_sharegpt.sh
 ```
 
 ```shell
@@ -444,8 +427,13 @@ python ./preprocess_data.py \
 修改后，执行脚本
 
 ```
-bash examples/mcore/qwen3/data_convert_qwen3_instruction_sharegpt.sh
+bash midea_train/data_convert_qwen3_instruction_sharegpt.sh
 ```
+
+转换日志如下：
+
+![image-20250729173648524](qwen3-14B-开源数据集.assets/image-20250729173648524.png)
+
 
 指令微调数据集处理结果如下：
 
@@ -463,7 +451,8 @@ sharegpt_packed_labels_document.idx
 修改单机微调脚本 tune_qwen3_14b_4K_full_ptd.sh 
 
 ```
-vim examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh 
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh midea_train/
+vim midea_train/tune_qwen3_14b_4K_full_ptd.sh 
 ```
 
 示例脚本内容如下：
@@ -528,8 +517,12 @@ TUNE_ARGS="
 如果是单机运行场景，只需要在一台机器上启动微调脚本：
 
 ```bash
-bash examples/mcore/qwen3/tune_qwen3_8b_4K_full_ptd.sh
+bash midea_train/tune_qwen3_14b_4K_full_ptd.sh 
 ```
+
+训练日志如下：
+
+![image-20250729174931710](qwen3-14B-开源数据集.assets/image-20250729174931710.png)
 
 tensorboard监控微调loss下降结果如下：
 
