@@ -1125,6 +1125,10 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
+转换过程部分日志如下：
+
+![image-20250730184219084](qwen3-14B.assets/image-20250730184219084.png)
+
 ### 5.4 lora权重合并后转换为HF权重
 
 若希望将lora权重合并转换为 Hugging Face（HF）格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
@@ -1171,6 +1175,10 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
 
+转换过程部分日志如下：
+
+![image-20250730184716011](qwen3-14B.assets/image-20250730184716011.png)
+
 ### 5.5 LoRA 推理验证
 
 > 推理方法与SFT的推理方法相同
@@ -1208,9 +1216,57 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
 ```
 
+运行过程日志如下：
+
+
+
 ### 5.6 LoRA权重推理评估
 
-LoRA权重推理评估方法和SFT中mmlu推理评估方法相同。
+> LoRA权重推理评估方法和SFT中mmlu推理评估方法相同，修改权重路径即可。
+
+使用评估脚本  generate_qwen3_14b_ptd.sh
+
+```
+cp examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh midea_train/evaluate_qwen3_14b_lora_mmlu_ptd.sh
+vim midea_train/evaluate_qwen3_14b_lora_mmlu_ptd.sh
+```
+
+修改以下参数：
+
+```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/"
+DATA_PATH="/apps/hw/datasets/mmlu/data/test"
+TASK="mmlu"
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+运行脚本
+
+```
+bash midea_train/evaluate_qwen3_14b_lora_mmlu_ptd.sh
+```
+
+运行过程日志如下：
+
+![image-20250730191330384](qwen3-14B.assets/image-20250730191330384.png)
+
+评测结果如下：
+
+
 
 
 ## 六、附加说明

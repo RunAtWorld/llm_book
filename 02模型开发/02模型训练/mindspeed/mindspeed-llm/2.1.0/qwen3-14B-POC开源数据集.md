@@ -1,4 +1,4 @@
-# Qwen3-14B开源数据集POC版本验证
+Qwen3-14B开源数据集POC版本验证
 
 ## 一、版本配套
 
@@ -272,7 +272,7 @@ alpaca_packed_labels_document.bin
 alpaca_packed_labels_document.idx
 ```
 
-### 4.3  使用ShareGPT数据集
+### 4.2  使用ShareGPT数据集
 
 #### 4.2.1 对话指令微调数据集
 
@@ -448,7 +448,7 @@ sharegpt_packed_labels_document.bin
 sharegpt_packed_labels_document.idx
 ```
 
-### 4.4 全参微调训练
+### 4.3 全参微调训练
 
 修改单机全参微调脚本
 
@@ -550,11 +550,11 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 - 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
 - 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
 
-### 4.5 推理验证
+### 4.4 全参推理验证
 
 完成微调后，需要进一步验证模型是否具备了预期的输出能力。我们提供了简单的模型生成脚本，只需要加载微调后的模型权重，便可观察模型在不同生成参数配置下的回复。
 
-使用推理脚本  generate_qwen3_14b_ptd.sh
+使用推理脚本
 
 ```
 cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_train/generate_qwen3_14b_full_ptd.sh
@@ -592,9 +592,9 @@ bash midea_train/generate_qwen3_14b_full_ptd.sh
 
 ![image-20250730180251039](qwen3-14B-POC开源数据集.assets/image-20250730180251039.png)
 
-### 4.6 评测集验证
+### 4.5 评测集验证
 
-#### 4.6.1 mmlu评测
+#### 4.5.1 mmlu评测
 
 使用评估脚本  generate_qwen3_14b_ptd.sh
 
@@ -638,9 +638,9 @@ bash midea_train/evaluate_qwen3_14b_full_mmlu_ptd.sh
 
 评测结果如下：
 
+![image-20250730194504121](qwen3-14B-POC开源数据集.assets/image-20250730194504121.png)
 
-
-评估参数说明
+评测参数说明如下：
 
 - **`--prompt-type`**：模型对话模板，确保评估输入结构匹配模型需求。
 - **`--hf-chat-template`**：若模型具备内置 `chat_template` 属性，可添加该参数，使用内置模板。
@@ -727,7 +727,7 @@ bash midea_train/tune_qwen3_14b_4K_lora_ptd.sh
 
 tensorboard监控微调loss下降结果如下：
 
-![image-20250728182657139](qwen3-14B.assets/image-20250728182657139.png)
+![image-20250730193010692](qwen3-14B-POC开源数据集.assets/image-20250730193010692.png)
 
 参数说明：
 
@@ -786,12 +786,16 @@ python convert_ckpt.py \
 bash midea_train/ckpt_convert_qwen3_mcore2mcore_lora.sh
 ```
 
+转换过程部分日志如下：
+
+![image-20250730184205899](qwen3-14B-POC开源数据集.assets/image-20250730184205899.png)
+
 ### 5.4 lora权重合并后转换为HF权重
 
-若希望将lora权重合并转换为Hugging Face格式，修改合并脚本 ckpt_convert_qwen3_mcore2hf_lora.sh
+若希望将lora权重合并转换为Hugging Face格式，修改合并脚本
 
 ```
-cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh midea_train/
+cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh midea_train/ckpt_convert_qwen3_mcore2hf_lora.sh
 vim midea_train/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
 
@@ -827,6 +831,10 @@ python convert_ckpt.py \
 ```shell
 bash midea_train/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
+
+转换过程部分日志如下：
+
+![image-20250730184646400](qwen3-14B-POC开源数据集.assets/image-20250730184646400.png)
 
 ### 5.5 LoRA推理验证
 
@@ -866,9 +874,47 @@ bash midea_train/generate_qwen3_14b_lora_ptd.sh
 
 ### 5.6 LoRA权重mmlu评测
 
-LoRA权重推理评估方法和SFT中mmlu推理评估方法相同，修改权重路径即可。
+> LoRA权重推理评估方法和SFT中mmlu推理评估方法相同，修改权重路径即可。
 
+使用评估脚本  generate_qwen3_14b_ptd.sh
 
+```
+cp examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh midea_train/evaluate_qwen3_14b_lora_mmlu_ptd.sh
+vim midea_train/evaluate_qwen3_14b_lora_mmlu_ptd.sh
+```
+
+修改以下参数：
+
+```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/"
+DATA_PATH="/apps/hw/datasets/mmlu/data/test"
+TASK="mmlu"
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+运行脚本
+
+```
+bash midea_train/evaluate_qwen3_14b_lora_mmlu_ptd.sh
+```
+
+运行过程日志如下：
+
+![image-20250730191330384](qwen3-14B-POC开源数据集.assets/image-20250730191330384.png)
 
 ## 六、预训练
 
@@ -917,7 +963,7 @@ bash midea_train/data_convert_qwen3_pretrain.sh
 
 ![image-20250729225356220](qwen3-14B-POC开源数据集.assets/image-20250729225356220.png)
 
-参数解析
+参数解析如下：
 
 | 参数                       | 说明                                                         | 必填 |
 | -------------------------- | ------------------------------------------------------------ | ---- |
@@ -937,7 +983,7 @@ cp examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh midea_train/
 vim midea_train/pretrain_qwen3_14b_4K_ptd.sh
 ```
 
-示例脚本内容修改如下：
+脚本内容修改如下：
 
  ```shell
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
