@@ -105,7 +105,7 @@ docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  qwen3_14b a3_ll
 | Torch         | 2.1.0              | 容器内   |
 | Torch_npu     | release v7.0.0     | 容器内   |
 | MindSpeed     | 2.0.0_core_r0.8.0  | 容器内   |
-| MindSpeed-LLM | 2.0.0              | 容器内   |
+| MindSpeed-LLM | 2.1.0              | 容器内   |
 | Megatron-LM   | core_r0.8.0        | 容器内   |
 | Docker镜像OS  | Ubuntu 20.04.6     | /        |
 
@@ -152,7 +152,6 @@ docker run -dit -u root --privileged --ipc=host \
 ### 3.1 权重转换
 
 昇腾MindSpeed-LLM要求模型权重采用Megatron-LM格式，在这里我们将原始HuggingFace权重格式转换为Megatron-Mcore格式。
-详见[hf2mg权重转换](./pytorch/solutions/checkpoint_convert.md#21-huggingface权重转换到megatron-lm格式)
 
 使用官方提供的转换脚本，获取对应切分的mg权重。
 

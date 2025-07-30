@@ -8,12 +8,12 @@
 | ------------- | ------------------ | -------- |
 | Driver        | AscendHDK 25.0.RC1 | 宿主机   |
 | Firmware      | AscendHDK 25.0.RC1 | 宿主机   |
-| Python        | 3.8.10             | 容器内   |
+| Python        | 3.10               | 容器内   |
 | CANN          | CANN 8.1.RC1       | 容器内   |
-| Torch         | 2.1.0              | 容器内   |
+| Torch         | 2.6.0              | 容器内   |
 | Torch_npu     | release v7.0.0     | 容器内   |
 | MindSpeed     | 2.0.0_core_r0.8.0  | 容器内   |
-| MindSpeed-LLM | 2.0.0              | 容器内   |
+| MindSpeed-LLM | 2.1.0              | 容器内   |
 | Megatron-LM   | core_r0.8.0        | 容器内   |
 | Docker镜像OS  | Ubuntu 20.04.6     | /        |
 
@@ -53,15 +53,24 @@ docker run -dit -u root --privileged --ipc=host \
 ```
 
 > * -p 50000:3000 暴露tensorboard端口
-> * 宿主机挂载的代码目录为：/apps/hw/src/llm-qwen3
-> * 进入容器时会生效 .bashrc 中的环境变量，所以需要等待几秒。
+> * 宿主机挂载的代码目录为：/apps/hw/src/llm-qwen3/MindSpeed-LLM
+> * 进入容器时会生效 .bashrc 中的环境变量，所以需要等待几秒。环境变量相关代码如下
+>
+> ```
+> PYTHONPATH=/usr/local/Ascend/ascend-toolkit/latest/python/site-packages:/usr/local/Ascend/ascend-toolkit/latest/opp/built-in/op_impl/ai_core/tbe:/home/CI_daily/Train_PT/MindSpeed-MM/decord/python:/home/CI_daily/Train_PT/MindSpeed-MM/decord/python:/home/caiyy/decord/python
+> export LD_LIBRARY_PATH=/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:${LD_LIBRARY_PATH}
+> conda activate py310
+> source /usr/local/Ascend/ascend-toolkit/set_env.sh
+> source /usr/local/Ascend/nnal/atb/set_env.sh
+> # 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
+> export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+> ```
 
 ## 三、权重转换
 
 ### 3.1 权重HF转为MG
 
 昇腾MindSpeed-LLM要求模型权重采用Megatron-LM格式，在这里我们将原始HuggingFace权重格式转换为Megatron-Mcore格式。
-详见[hf2mg权重转换](./pytorch/solutions/checkpoint_convert.md#21-huggingface权重转换到megatron-lm格式)
 
 使用转换脚本，获取对应切分的mg权重。
 
@@ -101,7 +110,7 @@ bash midea_train/ckpt_convert_qwen3_hf2mcore.sh
 ```
 
 转换日志如下
-![image-20250729164517242](qwen3-14B-开源数据集.assets/image-20250729164517242.png)
+![image-20250729164517242](qwen3-14B-POC开源数据集.assets/image-20250729164517242.png)
 
 参数解析
 
@@ -160,7 +169,7 @@ bash midea_train/ckpt_convert_qwen3_mcore2hf.sh
 
 运行日志如下
 
-![image-20250729170830478](qwen3-14B-开源数据集.assets/image-20250729170830478.png)
+![image-20250729170830478](qwen3-14B-POC开源数据集.assets/image-20250729170830478.png)
 
 ## 四、全参微调
 
@@ -192,7 +201,7 @@ Alpaca风格示例：
 - [链式思维 (CoT)：Alpaca数据集](https://huggingface.co/datasets/QingyiSi/Alpaca-CoT/tree/main/Auto-CoT)
 - [BELLE：指令微调数据集](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
 
-Alpaca风格微调数据集下载可以基于网页直接下载，也可以基于命令行下载，比如：
+Alpaca风格微调数据集下载：
 
 ```bash
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
@@ -200,6 +209,8 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00
 #### 4.1.2 Alpaca风格数据集处理
 
 在指令监督微调时，`instruction` 列对应的内容会与 `input` 列对应的内容拼接后作为人类指令，即人类指令为 `instruction\ninput`其中 `\n`为用于连接的换行符。而 `output` 列对应的内容为模型回答。如果指定了history，则会将历史对话内容也加入进来。如果指定system 列，则对应的内容将被作为系统提示词。
+
+修改处理脚本
 
 ```
 cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_train/data_convert_qwen3_instruction_alpaca.sh
@@ -229,7 +240,7 @@ bash midea_train/data_convert_qwen3_instruction_alpaca.sh
 
 转换日志如下
 
-![image-20250729172413389](qwen3-14B-开源数据集.assets/image-20250729172413389.png)
+![image-20250729172413389](qwen3-14B-POC开源数据集.assets/image-20250729172413389.png)
 
 参数解析如下：
 
@@ -274,10 +285,9 @@ alpaca_packed_labels_document.idx
 - [Chain-of-though: ShareGPT数据集](https://huggingface.co/datasets/isaiahbjork/chain-of-thought-sharegpt)
 - [Capybara: ShareGPT数据集](https://huggingface.co/datasets/Undi95/Capybara-ShareGPT)
 
-`ShareGPT` 风格微调数据集下载可以基于网页直接下载，也可以基于命令行下载，比如：
+`ShareGPT` 风格微调数据集下载：
 
 ```shell
-cd /apps/hw/datasets/sharegpt
 wget https://huggingface.co/datasets/shibing624/roleplay-zh-sharegpt-gpt4-data/resolve/main/sharegpt_formatted_data-evol-gpt4.jsonl
 ```
 
@@ -427,7 +437,7 @@ bash midea_train/data_convert_qwen3_instruction_sharegpt.sh
 
 转换日志如下：
 
-![image-20250729173648524](qwen3-14B-开源数据集.assets/image-20250729173648524.png)
+![image-20250729173648524](qwen3-14B-POC开源数据集.assets/image-20250729173648524.png)
 
 
 指令微调数据集处理结果如下：
@@ -517,7 +527,7 @@ bash midea_train/tune_qwen3_14b_4K_full_ptd.sh
 
 训练日志如下：
 
-![image-20250729174931710](qwen3-14B-开源数据集.assets/image-20250729174931710.png)
+![image-20250729174931710](qwen3-14B-POC开源数据集.assets/image-20250729174931710.png)
 
 tensorboard监控微调loss下降结果如下：
 
@@ -619,7 +629,7 @@ bash midea_train/evaluate_qwen3_14b_ptd.sh
 
 运行过程如下
 
-![image-20250729182459601](qwen3-14B-开源数据集.assets/image-20250729182459601.png)
+![image-20250729182459601](qwen3-14B-POC开源数据集.assets/image-20250729182459601.png)
 
 评估参数说明
 
@@ -704,7 +714,7 @@ bash midea_train/tune_qwen3_14b_4K_lora_ptd.sh
 
 训练日志如下：
 
-![image-20250729181629481](qwen3-14B-开源数据集.assets/image-20250729181629481.png)
+![image-20250729181629481](qwen3-14B-POC开源数据集.assets/image-20250729181629481.png)
 
 tensorboard监控微调loss下降结果如下：
 
@@ -892,7 +902,7 @@ bash midea_train/data_convert_qwen3_pretrain.sh
 
 转换过程如下：
 
-![image-20250729225356220](qwen3-14B-开源数据集.assets/image-20250729225356220.png)
+![image-20250729225356220](qwen3-14B-POC开源数据集.assets/image-20250729225356220.png)
 
 参数解析
 
