@@ -924,11 +924,15 @@ PP=4
 SEQ_LENGTH=4096
 ```
 
-然后运行推理脚本：
+运行推理脚本：
 
 ```bash
 bash examples/mcore/qwen3/generate_qwen3_14b_ptd.sh
 ```
+
+过程部分日志如下：
+
+![image-20250730180314383](qwen3-14B.assets/image-20250730180314383.png)
 
 ### 4.6 评测集验证
 
@@ -1167,7 +1171,7 @@ python convert_ckpt.py \
 bash examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
 
-### 5.5 LoRA 推理
+### 5.5 LoRA 推理验证
 
 > 推理方法与SFT的推理方法相同
 

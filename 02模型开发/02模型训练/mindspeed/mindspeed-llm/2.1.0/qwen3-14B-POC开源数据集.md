@@ -47,7 +47,6 @@ docker run -dit -u root --privileged --ipc=host \
     -v /usr/local/Ascend/add-ons/:/usr/local/Ascend/add-ons/ \
     -v /usr/local/sbin/:/usr/local/sbin/ \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
-    -v /var/log/npu/conf/slog/slog.conf:/var/log/npu/conf/slog/slog.conf \
     -v /apps:/apps \
     a3_llm_poc:v2.1.0 bash
 ```
@@ -449,9 +448,9 @@ sharegpt_packed_labels_document.bin
 sharegpt_packed_labels_document.idx
 ```
 
-### 4.4 SFT微调训练
+### 4.4 全参微调训练
 
-修改单机微调脚本
+修改单机全参微调脚本
 
 ```
 cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh midea_train/
@@ -558,8 +557,8 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 使用推理脚本  generate_qwen3_14b_ptd.sh
 
 ```
-cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_train/
-vim midea_train/generate_qwen3_14b_ptd.sh
+cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_train/generate_qwen3_14b_full_ptd.sh
+vim midea_train/generate_qwen3_14b_full_ptd.sh
 ```
 
 修改以下参数：
@@ -568,10 +567,9 @@ vim midea_train/generate_qwen3_14b_ptd.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 
-CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4" # 指向微调后权重的保存路径
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 
-# Change for multinode config
 MASTER_ADDR=localhost
 MASTER_PORT=6000
 NNODES=1 # 集群里的节点数，以实际情况填写,
@@ -584,23 +582,25 @@ PP=4
 SEQ_LENGTH=4096
 ```
 
-然后运行推理脚本：
+运行推理脚本：
 
 ```bash
-bash midea_train/generate_qwen3_14b_ptd.sh
+bash midea_train/generate_qwen3_14b_full_ptd.sh
 ```
 
+过程部分日志如下：
 
+![image-20250730180251039](qwen3-14B-POC开源数据集.assets/image-20250730180251039.png)
 
 ### 4.6 评测集验证
 
-#### 4.6.1 mmlu推理评估
+#### 4.6.1 mmlu评测
 
 使用评估脚本  generate_qwen3_14b_ptd.sh
 
 ```
-cp examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh midea_train/
-vim midea_train/evaluate_qwen3_14b_ptd.sh
+cp examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh midea_train/evaluate_qwen3_14b_full_mmlu_ptd.sh
+vim midea_train/evaluate_qwen3_14b_full_mmlu_ptd.sh
 ```
 
 修改以下参数：
@@ -629,14 +629,14 @@ SEQ_LENGTH=4096
 运行脚本
 
 ```
-bash midea_train/evaluate_qwen3_14b_ptd.sh
+bash midea_train/evaluate_qwen3_14b_full_mmlu_ptd.sh
 ```
 
 运行过程如下：
 
 ![image-20250729182459601](qwen3-14B-POC开源数据集.assets/image-20250729182459601.png)
 
-评估结果如下：
+评测结果如下：
 
 
 
@@ -662,7 +662,7 @@ Alpaca风格数据集Lora 微调处理和SFT微调数据集处理方式相同。
 修改单机lora微调脚本 tune_qwen3_14b_4K_lora_ptd.sh
 
 ```
-cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh midea_train/
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh midea_train/tune_qwen3_14b_4K_lora_ptd.sh
 vim midea_train/tune_qwen3_14b_4K_lora_ptd.sh
 ```
 
@@ -828,18 +828,16 @@ python convert_ckpt.py \
 bash midea_train/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
 
-### 5.5 LoRA 推理
+### 5.5 LoRA推理验证
 
-> 推理方法与SFT的推理方法相同
+> 推理方法与全参微调推理方法相同
 
-使用推理脚本  generate_qwen3_14b_ptd.sh
+编辑推理脚本
 
 ```
-cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_train/
-vim midea_train/generate_qwen3_14b_ptd.sh
+cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_train/generate_qwen3_14b_lora_ptd.sh
+vim midea_train/generate_qwen3_14b_lora_ptd.sh
 ```
-
-修改  `CHECKPOINT` 的权重路径为
 
 修改以下参数：
 
@@ -856,15 +854,21 @@ PP=4
 SEQ_LENGTH=4096
 ```
 
-然后运行推理脚本：
+运行推理脚本：
 
 ```bash
-bash midea_train/generate_qwen3_14b_ptd.sh
+bash midea_train/generate_qwen3_14b_lora_ptd.sh
 ```
 
-### 5.6 LoRA权重推理评估
+过程部分日志如下：
 
-LoRA权重推理评估方法和SFT中mmlu推理评估方法相同。
+![image-20250730181412477](qwen3-14B-POC开源数据集.assets/image-20250730181412477.png)
+
+### 5.6 LoRA权重mmlu评测
+
+LoRA权重推理评估方法和SFT中mmlu推理评估方法相同，修改权重路径即可。
+
+
 
 ## 六、预训练
 
@@ -1021,9 +1025,9 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
 ## 七、附加说明
 
-### 7.1 模型脚本环境变量说明
+### 7.1 模型训练环境常见变量说明
 
-模型列表中脚本的常见环境变量说明具体如下：
+模型训练常见常见环境变量说明：
 
 | 环境变量名称                      | 环境变量描述                                                                    |
 |-----------------------------|---------------------------------------------------------------------------|
@@ -1043,7 +1047,7 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
 ### 7.2 训练参数说明
 
-训练参数解析
+训练脚本常见参数解释
 
 | 参数                              | 说明                                                         | 必填 |
 | --------------------------------- | ------------------------------------------------------------ | ---- |
