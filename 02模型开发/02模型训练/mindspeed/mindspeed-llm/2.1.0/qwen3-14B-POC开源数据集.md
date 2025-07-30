@@ -52,7 +52,7 @@ docker run -dit -u root --privileged --ipc=host \
     a3_llm_poc:v2.1.0 bash
 ```
 
-> * -p 50000:3000 暴露tensorboard端口
+> * -p 50000:3000 暴露tensorboard端口，50000为宿主机端口号，3000为容器端口号
 > * 宿主机挂载的代码目录为：/apps/hw/src/llm-qwen3/MindSpeed-LLM
 > * 进入容器时会生效 .bashrc 中的环境变量，所以需要等待几秒。环境变量相关代码如下
 >
@@ -81,7 +81,7 @@ cp examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh midea_train/
 vim midea_train/ckpt_convert_qwen3_hf2mcore.sh
 ```
 
-如下 ckpt_convert_qwen3_hf2mcore.sh 为调整后的hf2mcore权重转换示例脚本
+这里采用**TP2PP4**的切分策略，按照如下配置修改权重转换脚本
 
 ```bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
@@ -101,15 +101,13 @@ python convert_ckpt.py \
     --params-dtype bf16 \
     --model-type-hf qwen3
 ```
-> 转换后的权重采用TP2PP4的切分策略
-
 启动转换
 
 ```bash
 bash midea_train/ckpt_convert_qwen3_hf2mcore.sh
 ```
 
-转换日志如下
+转换过程部分日志如下
 ![image-20250729164517242](qwen3-14B-POC开源数据集.assets/image-20250729164517242.png)
 
 参数解析
@@ -130,14 +128,14 @@ bash midea_train/ckpt_convert_qwen3_hf2mcore.sh
 
 ### 3.2 权重MG转为HF
 
-训练完成后，如果需要将MG权重转为HF权重，修改转换脚本 ckpt_convert_qwen3_mcore2hf.sh
+训练完成后，如果需要将Megatron-Mcore（MG）权重转为HuggingFace（HF）权重，修改转换脚本ckpt_convert_qwen3_mcore2hf.sh
 
 ```
 cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh midea_train/
 vim midea_train/ckpt_convert_qwen3_mcore2hf.sh
 ```
 
-将 Lora权重 合并转换为HF权重的示例参数：
+将 Lora权重 合并转换为HF权重的配置参数：
 
 ```shell
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
@@ -160,14 +158,14 @@ python convert_ckpt.py \
 >  * --save-model-type参数设置为 hf 
 >
 >  * save-dir 参数设置为原始hf权重的路径，脚本执行后，会在该目录下生成mg2hf的目录存放转换后的权重。
->  * tp和pp都设置为1：  --target-tensor-parallel-size 1 ， --target-pipeline-parallel-size 1 
+>  *  --target-tensor-parallel-size 1， --target-pipeline-parallel-size 1 ：因为转为HF后，无切分策略，因此tp和pp都需要设置为1
 
 运行脚本
 ```shell
 bash midea_train/ckpt_convert_qwen3_mcore2hf.sh
 ```
 
-运行日志如下
+转换过程部分日志如下
 
 ![image-20250729170830478](qwen3-14B-POC开源数据集.assets/image-20250729170830478.png)
 
@@ -210,13 +208,13 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00
 
 在指令监督微调时，`instruction` 列对应的内容会与 `input` 列对应的内容拼接后作为人类指令，即人类指令为 `instruction\ninput`其中 `\n`为用于连接的换行符。而 `output` 列对应的内容为模型回答。如果指定了history，则会将历史对话内容也加入进来。如果指定system 列，则对应的内容将被作为系统提示词。
 
-修改处理脚本
+修改转换脚本
 
 ```
 cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_train/data_convert_qwen3_instruction_alpaca.sh
 vim midea_train/data_convert_qwen3_instruction_alpaca.sh
 ```
-对数据集处理脚本 data_convert_qwen3_instruction.sh 中的配置进行修改：
+对数据集转换脚本的配置进行修改：
 
 ```shell
 python ./preprocess_data.py \
@@ -238,11 +236,11 @@ mkdir -p /apps/hw/outputs/qwen3/finetune_dataset_alpaca
 bash midea_train/data_convert_qwen3_instruction_alpaca.sh
 ```
 
-转换日志如下
+转换过程部分日志如下
 
 ![image-20250729172413389](qwen3-14B-POC开源数据集.assets/image-20250729172413389.png)
 
-参数解析如下：
+参数解释如下：
 
 * `--input`: 可以直接输入到数据集目录或具体文件，如果是目录，则处理全部文件, 支持 .parquet \ .csv \ .json \ .jsonl \ .txt \ .arrow 格式， 同一个文件夹下的数据格式需要保持一致 
 * `--prompt-type`: 用于指定模型模板，能够让base模型微调后能具备更好的对话能力。`prompt-type`的可选项可以在[templates](https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/mindspeed_llm/tasks/preprocess/templates.py)文件内查看。
@@ -453,14 +451,14 @@ sharegpt_packed_labels_document.idx
 
 ### 4.4 SFT微调训练
 
-修改单机微调脚本 tune_qwen3_14b_4K_full_ptd.sh 
+修改单机微调脚本
 
 ```
 cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh midea_train/
 vim midea_train/tune_qwen3_14b_4K_full_ptd.sh 
 ```
 
-示例脚本内容如下：
+脚本内容修改如下：
 
 
 ```shell
@@ -512,10 +510,10 @@ TUNE_ARGS="
 "
 ```
 
-微调脚本相关参数说明
+微调脚本相关参数说明：
 - `DATA_PATH`：数据集路径。请注意实际数据预处理生成文件末尾会增加`_input_ids_document`等后缀，该参数填写到数据集的前缀即可。例如实际的数据集相对路径是`./finetune_dataset/alpaca/alpaca_packed_input_ids_document.bin`等，那么只需要填`./finetune_dataset/alpaca/alpaca`即可。
 - `is-instruction-dataset`：用于指定微调过程中采用指令微调数据集，以确保模型依据特定指令数据进行微调。
-- `variable-seq-lengths`：在不同的mini-batch间支持以动态的序列长度进行微调，默认padding到`8`的整数倍，可以通过`pad-to-multiple-of`参数来修改padding的倍数。假设微调时指定`--seq-length`序列长度为1024，开启`--variable-seq-lengths`后，序列长度会padding到真实数据长度的8整数倍。如下图所示：  ![variable_seq_lengths](qwen3-14B.assets/variable_seq_lengths-17529189902421.png)
+- `variable-seq-lengths`：在不同的mini-batch间支持以动态的序列长度进行微调，默认padding到`8`的整数倍，可以通过`pad-to-multiple-of`参数来修改padding的倍数。详细可参考[variable length flash attention](https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/pytorch/features/variable_length_flash_attention.md)。假设微调时指定`--seq-length`序列长度为1024，开启`--variable-seq-lengths`后，序列长度会padding到真实数据长度的8整数倍。如下图所示：  ![variable_seq_lengths](qwen3-14B.assets/variable_seq_lengths-17529189902421.png)
 
 * `--save-interval` 多少步存一次ckpt
 
@@ -525,7 +523,7 @@ TUNE_ARGS="
 bash midea_train/tune_qwen3_14b_4K_full_ptd.sh 
 ```
 
-训练日志如下：
+训练过程部分日志如下：
 
 ![image-20250729174931710](qwen3-14B-POC开源数据集.assets/image-20250729174931710.png)
 
@@ -547,6 +545,11 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 ```
 
 最后确保每台机器上的模型路径和数据集路径等无误后，在多个终端上同时启动预训练脚本即可开始训练。
+
+**注意**：
+
+- 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
+- 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
 
 ### 4.5 推理验证
 
@@ -586,6 +589,8 @@ SEQ_LENGTH=4096
 ```bash
 bash midea_train/generate_qwen3_14b_ptd.sh
 ```
+
+
 
 ### 4.6 评测集验证
 
@@ -627,9 +632,13 @@ SEQ_LENGTH=4096
 bash midea_train/evaluate_qwen3_14b_ptd.sh
 ```
 
-运行过程如下
+运行过程如下：
 
 ![image-20250729182459601](qwen3-14B-POC开源数据集.assets/image-20250729182459601.png)
+
+评估结果如下：
+
+
 
 评估参数说明
 
@@ -712,7 +721,7 @@ TUNE_ARGS="
 bash midea_train/tune_qwen3_14b_4K_lora_ptd.sh
 ```
 
-训练日志如下：
+训练部分日志如下：
 
 ![image-20250729181629481](qwen3-14B-POC开源数据集.assets/image-20250729181629481.png)
 
@@ -1004,6 +1013,11 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 ```
 
 最后确保每台机器上的模型路径和数据集路径等无误后，在多个终端上同时启动预训练脚本即可开始训练。
+
+**注意**：
+
+- 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
+- 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
 
 ## 七、附加说明
 
