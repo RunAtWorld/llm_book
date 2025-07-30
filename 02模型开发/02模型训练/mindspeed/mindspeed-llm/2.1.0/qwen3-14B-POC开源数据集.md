@@ -475,7 +475,7 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
 CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
 CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
-DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset/alpaca"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset_alpaca/alpaca"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
 TP=2
@@ -659,6 +659,7 @@ bash midea_train/evaluate_qwen3_14b_full_mmlu_ptd.sh
 Alpaca风格数据集Lora 微调处理和SFT微调数据集处理方式相同。
 
 ### 5.2 Lora微调训练
+
 修改单机lora微调脚本 tune_qwen3_14b_4K_lora_ptd.sh
 
 ```
@@ -682,7 +683,7 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
 CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
 CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
-DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset/alpaca"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset_alpaca/alpaca"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径4
 TP=2
 PP=4
