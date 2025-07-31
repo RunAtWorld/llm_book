@@ -715,11 +715,11 @@ bash midea_train/evaluate_qwen3_14b_full_mmlu_ptd.sh
 
 运行过程如下：
 
-![image-20250729182459601](qwen3-14B-POC开源数据集.assets/image-20250729182459601.png)
+![image-20250731155449492](qwen3-14B-POC开源数据集.assets/image-20250731155449492.png)
 
 评测结果如下：
 
-![image-20250730194504121](qwen3-14B-POC开源数据集.assets/image-20250730194504121.png)
+![image-20250731175447647](qwen3-14B-POC开源数据集.assets/image-20250731175447647.png)
 
 评测参数说明如下：
 
@@ -895,7 +895,7 @@ bash midea_train/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
 
 tensorboard监控微调loss下降结果如下：
 
-![image-20250731154545042](qwen3-14B-POC开源数据集.assets/image-20250731154545042.png)
+![image-20250731163133148](qwen3-14B-POC开源数据集.assets/image-20250731163133148.png)
 
 ### 5.3 Lora权重与Base权重的合并
 
