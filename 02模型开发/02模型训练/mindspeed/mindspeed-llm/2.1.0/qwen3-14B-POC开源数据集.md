@@ -891,11 +891,11 @@ bash midea_train/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
 
 训练部分日志如下：
 
-
+![image-20250731152622174](qwen3-14B-POC开源数据集.assets/image-20250731152622174.png)
 
 tensorboard监控微调loss下降结果如下：
 
-
+![image-20250731153403887](qwen3-14B-POC开源数据集.assets/image-20250731153403887.png)
 
 ### 5.3 Lora权重与Base权重的合并
 
