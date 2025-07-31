@@ -450,11 +450,13 @@ sharegpt_packed_labels_document.idx
 
 ### 4.3 全参微调训练
 
+#### 4.3.1 全参微调Alpaca数据集
+
 修改单机全参微调脚本
 
 ```
-cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh midea_train/
-vim midea_train/tune_qwen3_14b_4K_full_ptd.sh 
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh midea_train/tune_qwen3_14b_4K_full_alpaca_ptd.sh
+vim midea_train/tune_qwen3_14b_4K_full_alpaca_ptd.sh 
 ```
 
 脚本内容修改如下：
@@ -519,7 +521,7 @@ TUNE_ARGS="
 如果是单机运行场景，只需要在一台机器上启动微调脚本：
 
 ```bash
-bash midea_train/tune_qwen3_14b_4K_full_ptd.sh 
+bash midea_train/tune_qwen3_14b_4K_full_alpaca_ptd.sh 
 ```
 
 训练过程部分日志如下：
@@ -549,6 +551,85 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
 - 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
 - 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
+
+#### 4.3.2 全参微调ShareGPT数据集
+
+修改单机全参微调脚本
+
+```
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh midea_train/tune_qwen3_14b_4K_full_sharegpt_ptd.sh
+vim midea_train/tune_qwen3_14b_4K_full_sharegpt_ptd.sh 
+```
+
+脚本内容修改如下：
+
+
+```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4_sharegpt/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset_sharegpt/sharegpt"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
+
+TP=2
+PP=4
+MBS=1
+GBS=16
+SEQ_LENGTH=4096
+TRAIN_ITERS=1000 #训练1000步
+
+...
+
+DATA_ARGS="
+    --data-path $DATA_PATH \
+    --split 100,0,0
+"
+
+OUTPUT_ARGS="
+    --log-interval 1 \
+    --save-interval 1000 \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --log-throughput
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --prompt-type qwen \
+    --variable-seq-lengths
+"
+```
+
+微调脚本相关参数说明：
+
+- `DATA_PATH`：数据集路径。请注意实际数据预处理生成文件末尾会增加`_input_ids_document`等后缀，该参数填写到数据集的前缀即可。例如实际的数据集相对路径是`./finetune_dataset/alpaca/alpaca_packed_input_ids_document.bin`等，那么只需要填`./finetune_dataset/alpaca/alpaca`即可。
+- `is-instruction-dataset`：用于指定微调过程中采用指令微调数据集，以确保模型依据特定指令数据进行微调。
+- `variable-seq-lengths`：在不同的mini-batch间支持以动态的序列长度进行微调，默认padding到`8`的整数倍，可以通过`pad-to-multiple-of`参数来修改padding的倍数。详细可参考[variable length flash attention](https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/pytorch/features/variable_length_flash_attention.md)。假设微调时指定`--seq-length`序列长度为1024，开启`--variable-seq-lengths`后，序列长度会padding到真实数据长度的8整数倍。如下图所示：  ![variable_seq_lengths](qwen3-14B.assets/variable_seq_lengths-17529189902421.png)
+
+* `--save-interval` 多少步存一次ckpt
+
+如果是单机运行场景，只需要在一台机器上启动微调脚本：
+
+```bash
+bash midea_train/tune_qwen3_14b_4K_full_sharegpt_ptd.sh 
+```
+
+训练过程部分日志如下：
+
+![image-20250731104730228](qwen3-14B-POC开源数据集.assets/image-20250731104730228.png)
 
 ### 4.4 全参推理验证
 
@@ -660,7 +741,9 @@ Alpaca风格数据集Lora 微调处理和SFT微调数据集处理方式相同。
 
 ### 5.2 Lora微调训练
 
-修改单机lora微调脚本 tune_qwen3_14b_4K_lora_ptd.sh
+#### 5.2.1 Lora微调Alpaca数据集
+
+修改单机lora微调脚本
 
 ```
 cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh midea_train/tune_qwen3_14b_4K_lora_ptd.sh
@@ -740,6 +823,79 @@ tensorboard监控微调loss下降结果如下：
 - **`--lora-fusion`**:  是否启用<a href="https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/docs/features/cc_lora.md">CCLoRA</a>算法，该算法通过计算通信掩盖提高性能。
 - **`--lora-target-modules`**:  选择需要添加 LoRA 的模块。  *mcore 模型可选模块：* `linear_qkv`, `linear_proj`, `linear_fc1`, `linear_fc2`
 - **`--lora-load`**:  加载 LoRA 权重断点继续训练或用于推理。在推理时需与 `--load` 参数配合使用，加载 `CKPT_SAVE_DIR` 路径下的 LoRA 权重。
+
+#### 5.2.2 Lora微调ShareGPT数据集
+
+修改单机lora微调脚本
+
+```
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh midea_train/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
+vim midea_train/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
+```
+
+脚本内容如下：
+
+```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1  #定义了任务流能够利用或映射到的硬件队列的数量。
+
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_sharegpt/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/qwen3/finetune_dataset_sharegpt/sharegpt"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径4
+TP=2
+PP=4
+SEQ_LENGTH=4096
+TRAIN_ITERS=2000
+
+...
+
+OUTPUT_ARGS="
+    --load ${CKPT_LOAD_DIR} \
+    --save ${CKPT_SAVE_DIR} \
+    --log-interval 1 \
+    --save-interval ${TRAIN_ITERS} \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --no-load-optim \
+    --no-load-rng
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --tokenizer-not-use-fast \
+    --prompt-type qwen \
+    --variable-seq-lengths \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-fusion \
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2
+"
+```
+
+运行脚本
+
+```
+bash midea_train/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
+```
+
+训练部分日志如下：
+
+
+
+tensorboard监控微调loss下降结果如下：
+
+
 
 ### 5.3 Lora权重与Base权重的合并
 
