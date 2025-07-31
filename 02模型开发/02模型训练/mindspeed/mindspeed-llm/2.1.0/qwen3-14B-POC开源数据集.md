@@ -13,7 +13,7 @@
 | Torch         | 2.6.0              | 容器内   |
 | Torch_npu     | release v7.0.0     | 容器内   |
 | MindSpeed     | 2.0.0_core_r0.8.0  | 容器内   |
-| MindSpeed-LLM | 2.1.0              | 容器内   |
+| MindSpeed-LLM | 2.1.0_poc          | 容器内   |
 | Megatron-LM   | core_r0.8.0        | 容器内   |
 | Docker镜像OS  | Ubuntu 20.04.6     | /        |
 
@@ -677,7 +677,7 @@ bash midea_train/generate_qwen3_14b_full_ptd.sh
 
 #### 4.5.1 mmlu评测
 
-使用评估脚本  generate_qwen3_14b_ptd.sh
+使用评估脚本
 
 ```
 cp examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh midea_train/evaluate_qwen3_14b_full_mmlu_ptd.sh
@@ -690,7 +690,7 @@ vim midea_train/evaluate_qwen3_14b_full_mmlu_ptd.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
 
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
-CHECKPOINT="/apps/hw/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"
+CHECKPOINT="/apps/hw/outputs/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4/"
 DATA_PATH="/apps/hw/datasets/mmlu/data/test"
 TASK="mmlu"
 
@@ -895,7 +895,7 @@ bash midea_train/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
 
 tensorboard监控微调loss下降结果如下：
 
-![image-20250731153403887](qwen3-14B-POC开源数据集.assets/image-20250731153403887.png)
+![image-20250731154545042](qwen3-14B-POC开源数据集.assets/image-20250731154545042.png)
 
 ### 5.3 Lora权重与Base权重的合并
 
@@ -1179,6 +1179,10 @@ bash midea_train/pretrain_qwen3_14b_4K_ptd.sh
 训练日志如下：
 
 ![image-20250718113913675](qwen3-14B.assets/image-20250718113913675.png)
+
+tensorboard监控微调loss下降结果如下：
+
+![image-20250731154119566](qwen3-14B-POC开源数据集.assets/image-20250731154119566.png)
 
 脚本中特性包含部分参数解释
 
