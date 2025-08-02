@@ -111,7 +111,7 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 ```
 
 转换过程部分日志如下
-![image-20250729164517242](qwen3-14B-POC开源数据集.assets/image-20250729164517242.png)
+
 
 参数解析
 
@@ -162,13 +162,18 @@ bash midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
 
 转换日志如下：
 
-
+![image-20250802231835592](qwen3-14B业务数据集容器内验证.assets/image-20250802231835592.png)
 
 
 指令微调数据集处理结果如下：
 
 ```shell
-
+intent_packed_attention_mask_document.bin
+intent_packed_attention_mask_document.idx
+intent_packed_input_ids_document.bin
+intent_packed_input_ids_document.idx
+intent_packed_labels_document.bin
+intent_packed_labels_document.idx
 ```
 
 ### 4.2 全参微调训练
@@ -176,8 +181,8 @@ bash midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
 修改单机全参微调脚本
 
 ```
-cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh midea_qwen3/tune_qwen3_14b_4K_full_sharegpt_ptd.sh
-vim midea_qwen3/tune_qwen3_14b_4K_full_sharegpt_ptd.sh 
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_full_ptd.sh midea_qwen3/tune_qwen3_14b_4K_full_intent10k_ptd.sh
+vim midea_qwen3/tune_qwen3_14b_4K_full_intent10k_ptd.sh 
 ```
 
 脚本内容修改如下：
@@ -243,12 +248,12 @@ TUNE_ARGS="
 如果是单机运行场景，只需要在一台机器上启动微调脚本：
 
 ```bash
-bash midea_qwen3/tune_qwen3_14b_4K_full_sharegpt_ptd.sh 
+bash midea_qwen3/tune_qwen3_14b_4K_full_intent10k_ptd.sh 
 ```
 
 训练过程部分日志如下：
 
-![image-20250731104730228](qwen3-14B-POC开源数据集.assets/image-20250731104730228.png)
+
 
 ### 4.3 全参推理验证
 
