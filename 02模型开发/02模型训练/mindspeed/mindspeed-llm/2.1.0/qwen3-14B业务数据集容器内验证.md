@@ -136,44 +136,39 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 对数据集处理脚本的配置进行修改：
 
 ```
-cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_qwen3/data_convert_qwen3_instruction_sharegpt.sh
-mkdir -p /apps/hw/outputs/midea/qwen3/finetune_dataset_sharegpt
-vim midea_qwen3/data_convert_qwen3_instruction_sharegpt.sh
+cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
+mkdir -p /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k
+vim midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
 ```
 
 ```shell
 python ./preprocess_data.py \
-    --input  /apps/hw/datasets/roleplay-zh-sharegpt-gpt4-data/sharegpt_formatted_data-evol-gpt4.jsonl \
+    --input  /apps/hw/datasets/midea_dataset/intent/intent_train_10k.jsonl \
     --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
-    --output-prefix /apps/hw/outputs/midea/qwen3/finetune_dataset_sharegpt/sharegpt \
+    --output-prefix /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k/intent \
     --handler-name SharegptStyleInstructionHandler \
     --tokenizer-type PretrainedFromHF \
     --workers 4 \
     --log-interval 1000 \
-    --prompt-type qwen
-    # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
+    --prompt-type qwen \
+    --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
 ```
 
 修改后，执行脚本
 
 ```
-bash midea_qwen3/data_convert_qwen3_instruction_sharegpt.sh
+bash midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
 ```
 
 转换日志如下：
 
-![image-20250729173648524](qwen3-14B-POC开源数据集.assets/image-20250729173648524.png)
+
 
 
 指令微调数据集处理结果如下：
 
 ```shell
-sharegpt_packed_attention_mask_document.bin
-sharegpt_packed_attention_mask_document.idx
-sharegpt_packed_input_ids_document.bin
-sharegpt_packed_input_ids_document.idx
-sharegpt_packed_labels_document.bin
-sharegpt_packed_labels_document.idx
+
 ```
 
 ### 4.2 全参微调训练
