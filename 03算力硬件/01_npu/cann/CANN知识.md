@@ -1,6 +1,11 @@
-# 昇腾GANN
+# 昇腾CANN
+
+> CANN [社区官方文档](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/index/index.html)
+>
+> * [集合通信](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/apiref/envvar/envref_07_0144.html)
 
 ## CANN镜像
+
 > 1. 昇腾镜像仓库 : https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884
 > 2. CANN镜像制作代码仓库: https://github.com/Ascend/cann-container-image
 
