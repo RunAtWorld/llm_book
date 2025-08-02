@@ -71,7 +71,7 @@ docker run -it -u root --privileged --ipc=host \
 > export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 > ```
 
-## 三、权重HF转为MG
+## 三、HF权重转为MG格式
 
 昇腾MindSpeed-LLM要求模型权重采用Megatron-LM格式，在这里我们将原始HuggingFace权重格式转换为Megatron-Mcore格式。
 
