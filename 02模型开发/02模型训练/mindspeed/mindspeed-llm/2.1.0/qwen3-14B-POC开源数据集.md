@@ -20,7 +20,7 @@
 ## 二、创建容器
 
 ```bash
-docker run -dit -u root --privileged --ipc=host \
+docker run -it -u root --privileged --ipc=host \
     --name 'qwen3_14b_sft' \
     --device=/dev/davinci0 \
     --device=/dev/davinci1 \
