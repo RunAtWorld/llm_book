@@ -28,7 +28,7 @@
 
 ```bash
 docker run -it -u root --privileged --ipc=host \
-    --name 'qwen3_img' \
+    --name 'qwen3_sft' \
     --device=/dev/davinci0 \
     --device=/dev/davinci1 \
     --device=/dev/davinci2 \
@@ -55,7 +55,7 @@ docker run -it -u root --privileged --ipc=host \
     -v /usr/local/sbin/:/usr/local/sbin/ \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
     -v /apps/shared_storage/hw_test/hw:/apps/hw \
-    image.midea.com/caas/a3_llm_release:v2.1.1  bash
+    image.midea.com/caas/a3_llm_release:v2.1.2  bash
 ```
 
 > * -p 50000:3000 暴露tensorboard端口，50000为宿主机端口号，3000为容器端口号
