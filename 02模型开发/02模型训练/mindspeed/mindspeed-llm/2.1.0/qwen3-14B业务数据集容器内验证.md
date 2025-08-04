@@ -235,6 +235,15 @@ TUNE_ARGS="
     --prompt-type qwen \
     --variable-seq-lengths
 "
+
+...
+
+torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
+ 	...
+    --tensorboard-dir /apps/hw/outputs/qwen3/14b/tb/full/midea/intent10k_0802 \
+	...
+    | tee ./logs/tune_qwen3_14b_full_intent10k_0802.log
+
 ```
 
 微调脚本相关参数说明：
@@ -328,6 +337,14 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 TP=2
 PP=4
 SEQ_LENGTH=4096
+
+#重点设置eval-data-path和tee的输出日志路径
+torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
+...
+         --eval-data-path "/apps/hw/datasets/midea_dataset/intent/intent_test_1k.jsonl" \
+         --eval-data-size 1000 \
+                | tee logs/generate_mcore_qwen3_14b_eval_intent10k_dataset.log
+
 ```
 
 然后运行评测脚本：
@@ -336,7 +353,17 @@ SEQ_LENGTH=4096
 bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 ```
 
+部分评测日志如下：
+
+![image-20250804230428051](qwen3-14B业务数据集容器内验证.assets/image-20250804230428051.png)
+
 评测结果如下，准确率
+
+```
+Average accuracy: 0.9410000000000004
+```
+
+![image-20250804230139709](qwen3-14B业务数据集容器内验证.assets/image-20250804230139709.png)
 
 #### 4.4.2 NPU转GPU评测
 
@@ -399,8 +426,8 @@ Lora 微调的数据集复用全参微调数据集即可。
 修改单机lora微调脚本
 
 ```bash
-cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh midea_qwen3/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
-vim midea_qwen3/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
+cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh midea_qwen3/tune_qwen3_14b_4K_lora_intent10k_ptd.sh
+vim midea_qwen3/tune_qwen3_14b_4K_lora_intent10k_ptd.sh
 ```
 
 脚本内容如下：
@@ -418,9 +445,10 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
 CKPT_LOAD_DIR="/apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_sharegpt/"  #训练完成后的权重保存路径
-DATA_PATH="/apps/hw/outputs/midea/qwen3/finetune_dataset_sharegpt/sharegpt"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
-TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径4
+CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k/intent"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
+
 TP=2
 PP=4
 SEQ_LENGTH=4096
@@ -428,40 +456,46 @@ TRAIN_ITERS=2000
 
 ...
 
-OUTPUT_ARGS="
-    --load ${CKPT_LOAD_DIR} \
-    --save ${CKPT_SAVE_DIR} \
-    --log-interval 1 \
-    --save-interval ${TRAIN_ITERS} \
-    --eval-interval ${TRAIN_ITERS} \
-    --eval-iters 0 \
-    --no-load-optim \
-    --no-load-rng
+# 重点设置lr=1.0e-5，lr-warmup-fraction=0.1
+TRAIN_ARGS="
+    --micro-batch-size 4 \
+    --global-batch-size 64 \
+    --lr 1.0e-5 \
+    --lr-decay-style cosine \
+    --min-lr 1.25e-7 \
+    --weight-decay 1e-1 \
+    --lr-warmup-fraction 0.1 \
+    --attention-dropout 0.0 \
+    --init-method-std 0.01 \
+    --hidden-dropout 0.0 \
+    --clip-grad 1.0 \
+    --adam-beta1 0.9 \
+    --adam-beta2 0.95 \
+    --initial-loss-scale 4096 \
+    --seed 42 \
+    --bf16 \
+    --train-iters ${TRAIN_ITERS} \
+    --seq-length ${SEQ_LENGTH} \
+    --no-shared-storage
 "
 
-TUNE_ARGS="
-    --finetune \
-    --stage sft \
-    --is-instruction-dataset \
-    --tokenizer-not-use-fast \
-    --prompt-type qwen \
-    --variable-seq-lengths \
-    --lora-r 16 \
-    --lora-alpha 32 \
-    --lora-fusion \
-    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2
-"
+
+torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
+	...
+    --tensorboard-dir /apps/hw/outputs/qwen3/14b/tb/lora/midea/intent10k_0804 \
+    ...
+    | tee /apps/hw/exps/qwen3/midea/lora0804/tune_qwen3_14b_lora_intent10k_ptd.log
 ```
 
 运行脚本
 
 ```
-bash midea_qwen3/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
+bash midea_qwen3/tune_qwen3_14b_4K_lora_intent10k_ptd.sh
 ```
 
 训练部分日志如下：
 
-
+![image-20250804230714019](qwen3-14B业务数据集容器内验证.assets/image-20250804230714019.png)
 
 tensorboard监控微调loss下降结果如下：
 
