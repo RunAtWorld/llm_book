@@ -7,7 +7,7 @@
 >
 > SFT模型权重（含 loss ）、训练参数、评估脚本跟 Qwen2.5-7B 训练好的模型在同一路径下/apps/likuan/llm_experiment/sft/
 
-## 一、版本配套（待检查）
+## 一、版本配套
 
 相关组件配套表如下：
 
@@ -156,7 +156,7 @@ python ./preprocess_data.py \
 
 修改后，执行脚本
 
-```
+```bash
 bash midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
 ```
 
@@ -265,9 +265,9 @@ tensorboard监控微调loss下降如下：
 
 使用推理脚本
 
-```
-cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_qwen3/generate_qwen3_14b_full_ptd.sh
-vim midea_qwen3/generate_qwen3_14b_full_ptd.sh
+```bash
+cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_qwen3/generate_qwen3_14b_full_intent10k_ptd.sh
+vim midea_qwen3/generate_qwen3_14b_full_intent10k_ptd.sh
 ```
 
 修改以下参数：
@@ -276,7 +276,7 @@ vim midea_qwen3/generate_qwen3_14b_full_ptd.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp2pp4_intent10k/" # 指向微调后权重的保存路径
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 
 MASTER_ADDR=localhost
@@ -294,26 +294,59 @@ SEQ_LENGTH=4096
 运行推理脚本：
 
 ```bash
-bash midea_qwen3/generate_qwen3_14b_full_ptd.sh
+bash midea_qwen3/generate_qwen3_14b_full_intent10k_ptd.sh
 ```
 
 过程部分日志如下：
 
-
+![image-20250804221552307](qwen3-14B业务数据集容器内验证.assets/image-20250804221552307.png)
 
 ### 4.4 intent_10k数据集评测
 
 #### 4.4.1 NPU评测
 
+使用评测脚本qwen3_14b_full_ptd_eval_intent10k.sh
+
+```bash
+vim midea_qwen3/qwen3_14b_full_ptd_eval_intent10k.sh
+```
+
+修改以下参数：
+
+```bash
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp2pp4_intent10k/" # 指向微调后权重的保存路径
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+
+# Change for multinode config
+MASTER_ADDR=localhost
+MASTER_PORT=6000
+NNODES=1 # 集群里的节点数，以实际情况填写,
+NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+NPUS_PER_NODE=8
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+```
+
+然后运行评测脚本：
+
+```bash
+bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
+```
+
+评测结果如下，准确率
+
 #### 4.4.2 NPU转GPU评测
 
 ##### 4.4.2.1  权重MG转为HF
 
-训练完成后，如果需要将Megatron-Mcore（MG）权重转为HuggingFace（HF）权重，修改转换脚本ckpt_convert_qwen3_mcore2hf.sh
+训练完成后，如果需要将Megatron-Mcore（MG）权重转为HuggingFace（HF）权重，修改转换脚本
 
-```
-cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh midea_qwen3/
-vim midea_qwen3/ckpt_convert_qwen3_mcore2hf.sh
+```bash
+cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh midea_qwen3/ckpt_convert_qwen3_14b_intent10k_mcore2hf.sh
+vim midea_qwen3/ckpt_convert_qwen3_14b_intent10k_mcore2hf.sh
 ```
 
 将 Lora权重 合并转换为HF权重的配置参数：
@@ -344,7 +377,7 @@ python convert_ckpt.py \
 运行脚本
 
 ```shell
-bash midea_qwen3/ckpt_convert_qwen3_mcore2hf.sh
+bash midea_qwen3/ckpt_convert_qwen3_14b_intent10k_mcore2hf.sh
 ```
 
 转换过程部分日志如下
@@ -365,7 +398,7 @@ Lora 微调的数据集复用全参微调数据集即可。
 
 修改单机lora微调脚本
 
-```
+```bash
 cp examples/mcore/qwen3/tune_qwen3_14b_4K_lora_ptd.sh midea_qwen3/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
 vim midea_qwen3/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
 ```
@@ -528,7 +561,7 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
 
 使用评估脚本
 
-```
+```bash
 cp examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh midea_qwen3/evaluate_qwen3_14b_lora_mmlu_ptd.sh
 vim midea_qwen3/evaluate_qwen3_14b_lora_mmlu_ptd.sh
 ```
@@ -572,7 +605,7 @@ bash midea_qwen3/evaluate_qwen3_14b_lora_mmlu_ptd.sh
 
 若希望将lora权重合并转换为Hugging Face格式，修改合并脚本
 
-```
+```bash
 cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 vim midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 ```
@@ -633,7 +666,7 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000
 
 修改脚本 data_convert_qwen3_pretrain.sh 
 
-```
+```bash
 cp examples/mcore/qwen3/data_convert_qwen3_pretrain.sh midea_qwen3/data_convert_qwen3_pretrain.sh
 vim midea_qwen3/data_convert_qwen3_pretrain.sh
 mkdir -p /apps/hw/outputs/midea/qwen3/pretrain_datasets_enwiki/
@@ -655,7 +688,7 @@ python ./preprocess_data.py \
 
 启动转换
 
-```
+```bash
 bash midea_qwen3/data_convert_qwen3_pretrain.sh
 ```
 
@@ -743,13 +776,13 @@ tensorboard监控微调loss下降结果如下：
 
 如果需要后台启动任务
 
-```
+```bash
 nohup bash midea_qwen3/pretrain_qwen3_14b_4K_ptd.sh >pretrain_qwen3_14b_4K_ptd.log 2>&1 &
 ```
 
 终止训练进程
 
-```
+```bash
 pkill -9 python
 ```
 
