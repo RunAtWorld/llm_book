@@ -48,7 +48,7 @@ docker run -it -u root --privileged --ipc=host \
     -v /usr/local/sbin/:/usr/local/sbin/ \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
     -v /apps:/apps \
-    a3_llm_poc:v2.1.0 bash
+    image.midea.com/caas/a3_llm_release:v2.1.1  bash
 ```
 
 > * -p 50000:3000 暴露tensorboard端口，50000为宿主机端口号，3000为容器端口号

@@ -18,7 +18,7 @@
 | Python        | 3.10              | 容器内   |
 | CANN          | CANN 8.2.0        | 容器内   |
 | Torch         | 2.6.0             | 容器内   |
-| Torch_npu     | release v7.0.0    | 容器内   |
+| Torch_npu     | release v7.1.0    | 容器内   |
 | MindSpeed     | 2.1.0_core_r0.8.0 | 容器内   |
 | MindSpeed-LLM | 2.1.0             | 容器内   |
 | Megatron-LM   | core_r0.8.0       | 容器内   |
@@ -28,7 +28,7 @@
 
 ```bash
 docker run -it -u root --privileged --ipc=host \
-    --name 'qwen3_14b_sft' \
+    --name 'qwen3_img' \
     --device=/dev/davinci0 \
     --device=/dev/davinci1 \
     --device=/dev/davinci2 \
@@ -55,11 +55,11 @@ docker run -it -u root --privileged --ipc=host \
     -v /usr/local/sbin/:/usr/local/sbin/ \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
     -v /apps/shared_storage/hw_test/hw:/apps/hw \
-    a3_llm_poc:v2.1.0 bash
+    image.midea.com/caas/a3_llm_release:v2.1.1  bash
 ```
 
 > * -p 50000:3000 暴露tensorboard端口，50000为宿主机端口号，3000为容器端口号
-> * 容器挂载的代码目录为：/apps/hw/src/train25.1/MindSpeed-LLM
+> * 宿主机挂载的代码目录为：/apps/shared_storage/hw_test/hw/src/hw-qwen3/MindSpeed-LLM，容器内目录为 /apps/hw/src/hw-qwen3/MindSpeed-LLM
 > * 进入容器时会生效 .bashrc 中的环境变量，所以需要等待几秒。环境变量相关代码如下
 >
 > ```
@@ -78,7 +78,7 @@ docker run -it -u root --privileged --ipc=host \
 使用转换脚本，获取对应切分的mg权重。
 
 ```bash
-cd /apps/hw/src/train25.1/MindSpeed-LLM
+cd /apps/hw/src/hw-qwen3/MindSpeed-LLM
 mkdir midea_qwen3
 cp examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 vim midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
@@ -111,7 +111,7 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 ```
 
 转换过程部分日志如下
-
+![image-20250802232634678](qwen3-14B业务数据集容器内验证.assets/image-20250802232634678.png)
 
 参数解析
 
@@ -202,14 +202,14 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
 CKPT_LOAD_DIR="/apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4_sharegpt/"  #训练完成后的权重保存路径
-DATA_PATH="/apps/hw/outputs/midea/qwen3/finetune_dataset_sharegpt/sharegpt"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp2pp4_intent10k/"  #训练完成后的权重保存路径
+DATA_PATH="/apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k/intent"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
 TP=2
 PP=4
-MBS=1
-GBS=16
+MBS=16
+GBS=128
 SEQ_LENGTH=4096
 TRAIN_ITERS=1000 #训练1000步
 
@@ -253,7 +253,11 @@ bash midea_qwen3/tune_qwen3_14b_4K_full_intent10k_ptd.sh
 
 训练过程部分日志如下：
 
+![image-20250804163739250](qwen3-14B业务数据集容器内验证.assets/image-20250804163739250.png)
 
+tensorboard监控微调loss下降如下：
+
+![image-20250804173025387](qwen3-14B业务数据集容器内验证.assets/image-20250804173025387.png)
 
 ### 4.3 全参推理验证
 
@@ -295,7 +299,7 @@ bash midea_qwen3/generate_qwen3_14b_full_ptd.sh
 
 过程部分日志如下：
 
-![image-20250730180251039](qwen3-14B-POC开源数据集.assets/image-20250730180251039.png)
+
 
 ### 4.4 intent_10k数据集评测
 
@@ -345,7 +349,7 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2hf.sh
 
 转换过程部分日志如下
 
-![image-20250729170830478](qwen3-14B-POC开源数据集.assets/image-20250729170830478.png)
+
 
 ##### 4.4.2.2  GPU推理评测
 
@@ -424,13 +428,9 @@ bash midea_qwen3/tune_qwen3_14b_4K_lora_sharegpt_ptd.sh
 
 训练部分日志如下：
 
-![image-20250731152622174](qwen3-14B-POC开源数据集.assets/image-20250731152622174.png)
+
 
 tensorboard监控微调loss下降结果如下：
-
-![image-20250731163133148](qwen3-14B-POC开源数据集.assets/image-20250731163133148.png)
-
-
 
 
 
@@ -468,7 +468,7 @@ bash midea_qwen3/generate_qwen3_14b_lora_ptd.sh
 
 过程部分日志如下：
 
-![image-20250730181412477](qwen3-14B-POC开源数据集.assets/image-20250730181412477.png)
+
 
 ### 5.6 intent_10k数据集评测
 
@@ -522,7 +522,7 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
 
 转换过程部分日志如下：
 
-![image-20250730184205899](qwen3-14B-POC开源数据集.assets/image-20250730184205899.png)
+
 
 
 
@@ -564,7 +564,7 @@ bash midea_qwen3/evaluate_qwen3_14b_lora_mmlu_ptd.sh
 
 运行过程日志如下：
 
-![image-20250730191330384](qwen3-14B-POC开源数据集.assets/image-20250730191330384.png)
+
 
 #### 5.6.2 NPU转GPU评测
 
@@ -612,7 +612,7 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 
 转换过程部分日志如下：
 
-![image-20250730184646400](qwen3-14B-POC开源数据集.assets/image-20250730184646400.png)
+
 
 ##### 5.6.2.2  GPU推理评测
 
@@ -661,7 +661,7 @@ bash midea_qwen3/data_convert_qwen3_pretrain.sh
 
 转换过程如下：
 
-![image-20250729225356220](qwen3-14B-POC开源数据集.assets/image-20250729225356220.png)
+
 
 参数解析如下：
 
@@ -721,11 +721,11 @@ bash midea_qwen3/pretrain_qwen3_14b_4K_ptd.sh
 
 训练日志如下：
 
-![image-20250718113913675](qwen3-14B.assets/image-20250718113913675.png)
+
 
 tensorboard监控微调loss下降结果如下：
 
-![image-20250731154119566](qwen3-14B-POC开源数据集.assets/image-20250731154119566.png)
+
 
 脚本中特性包含部分参数解释
 

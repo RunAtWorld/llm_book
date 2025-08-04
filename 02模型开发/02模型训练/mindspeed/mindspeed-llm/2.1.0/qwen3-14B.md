@@ -94,6 +94,12 @@ pip install transformers==4.51.0
 docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.0"  qwen3_14b a3_llm_poc:v2.1.0
 ```
 
+如果不需要历史信息，将容器存储为镜像
+
+```
+docker export qwen3_14b_pretrain | docker import - a3_llm_poc:v2.1.0
+```
+
 以上安装后，相关组件配套表如下：
 
 | 软件          | 版本               | 部署方式 |
