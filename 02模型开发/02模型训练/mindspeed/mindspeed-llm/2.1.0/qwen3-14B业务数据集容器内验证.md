@@ -2,8 +2,8 @@
 
 > GPU基线：
 >
-> qwen3_14B_intent_10k_5e 8*80G A800 Accuracy: 0.942
-> qwen3_14B_lora_intent_10k_5e 4*48G L40 Accuracy: 0.887
+> qwen3_14B_intent_10k_5e, 8 * 80G A800 Accuracy: 0.942
+> qwen3_14B_lora_intent_10k_5e, 4 * 48G L40 Accuracy: 0.887
 >
 > SFT模型权重（含 loss ）、训练参数、评估脚本跟 Qwen2.5-7B 训练好的模型在同一路径下/apps/likuan/llm_experiment/sft/
 
@@ -499,64 +499,17 @@ bash midea_qwen3/tune_qwen3_14b_4K_lora_intent10k_ptd.sh
 
 tensorboard监控微调loss下降结果如下：
 
+![image-20250805105357659](qwen3-14B业务数据集容器内验证.assets/image-20250805105357659.png)
 
+### 5.3 Lora权重与Base权重的合并
 
-### 5.5 LoRA推理验证
+基于lora微调训练完后，得到Lora权重与Base权重存在区别，无法直接用于续训，需要转换后才可使用，添加以下参数即可将训练好的 Lora 权重与 Base 权重融合,合并后转换为 Mcore 权重。
 
-> 推理方法与全参微调推理方法相同
-
-编辑推理脚本
-
-```
-cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_qwen3/generate_qwen3_14b_lora_ptd.sh
-vim midea_qwen3/generate_qwen3_14b_lora_ptd.sh
-```
-
-修改以下参数：
-
-```bash
-export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
-export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
-
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/" # 指向微调后权重的保存路径
-
-...
-
-TP=2
-PP=4
-SEQ_LENGTH=4096
-```
-
-运行推理脚本：
-
-```bash
-bash midea_qwen3/generate_qwen3_14b_lora_ptd.sh
-```
-
-过程部分日志如下：
-
-
-
-### 5.6 intent_10k数据集评测
-
-#### 5.6.1 NPU评测
-
-##### 5.6.1.1 Lora权重与Base权重的合并
-
-基于lora微调训练完后，得到Lora权重与Base权重存在区别，无法直接用于续训，需要转换后才可使用，添加以下参数即可将训练好的 Lora 权重与 Base 权重融合,合并后转换为 Mcore 权重：
-
-```bash
-    --lora-load ${CHECKPOINT_LORA}  \
-    --lora-r 16 \
-    --lora-alpha 32 \
-    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
-```
-
-修改合并脚本 ckpt_convert_qwen3_mcore2mcore_lora.sh
+修改合并脚本
 
 ```
-cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
-vim midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
+cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf.sh midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora_intent10k.sh
+vim midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora_intent10k.sh
 ```
 
 将 Lora权重 合并转换为 Mcore 权重的示例参数：
@@ -574,8 +527,8 @@ python convert_ckpt.py \
     --lora-alpha 32 \
     --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
     --load-dir /apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
-    --lora-load /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4/ \
-    --save-dir /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/ \
+    --lora-load /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k/ \
+    --save-dir /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k_merge/ \
     --model-type-hf qwen3
 ```
 
@@ -584,58 +537,62 @@ python convert_ckpt.py \
 启动转换脚本：
 
 ```shell
-bash midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora.sh
+bash midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora_intent10k.sh
 ```
 
 转换过程部分日志如下：
 
 
 
+### 5.4 LoRA推理验证
 
+> 推理方法与全参微调推理方法相同
 
-使用评估脚本
+编辑推理脚本
 
-```bash
-cp examples/mcore/qwen3/evaluate_qwen3_14b_ptd.sh midea_qwen3/evaluate_qwen3_14b_lora_mmlu_ptd.sh
-vim midea_qwen3/evaluate_qwen3_14b_lora_mmlu_ptd.sh
+```
+cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
+vim midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
 ```
 
 修改以下参数：
 
-```shell
+```bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 
-TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_merge/"
-DATA_PATH="/apps/hw/datasets/mmlu/data/test"
-TASK="mmlu"
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k/" # 指向微调后权重的保存路径
 
-# 基础配置
-NPUS_PER_NODE=8  #使用单节点的8卡NPU
-MASTER_ADDR=localhost #以本节点ip地址为master_ip
-MASTER_PORT=6015 #本节点端口号为6015
-NNODES=1  #单机，即一台节点，多机即多节点
-NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
-WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+...
 
 TP=2
 PP=4
 SEQ_LENGTH=4096
+
+torchrun $DISTRIBUTED_ARGS inference.py \
+	...
+         | tee /apps/hw/exps/qwen3/midea/lora0804/generate_qwen3_14b_lora_intent10k.log
 ```
 
-运行脚本
+运行推理脚本：
 
+```bash
+bash midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
 ```
-bash midea_qwen3/evaluate_qwen3_14b_lora_mmlu_ptd.sh
-```
 
-运行过程日志如下：
+过程部分日志如下：
 
 
 
-#### 5.6.2 NPU转GPU评测
+### 5.5 intent_10k数据集评测
 
-##### 5.6.2.1 lora权重合并后转换为HF权重
+#### 5.5.1 NPU评测
+
+
+
+#### 5.5.2 NPU转GPU评测
+
+##### 5.5.2.1 lora权重合并后转换为HF权重
 
 若希望将lora权重合并转换为Hugging Face格式，修改合并脚本
 
@@ -681,7 +638,11 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
 
 
 
-##### 5.6.2.2  GPU推理评测
+##### 5.5.2.2  GPU推理评测
+
+
+
+
 
 ## 六、预训练
 
