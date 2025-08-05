@@ -640,7 +640,11 @@ bash examples/mcore/qwen3/qwen3_14b_lora_ptd_eval_intent10k.sh
 
 评测结果如下，准确率
 
+```
+Average accuracy: 0.795
+```
 
+![image-20250805120327386](qwen3-14B业务数据集容器内验证.assets/image-20250805120327386.png)
 
 #### 5.5.2 NPU转GPU评测
 
@@ -688,7 +692,7 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh | tee /apps/hw/ex
 
 转换过程部分日志如下：
 
-
+![image-20250805120240184](qwen3-14B业务数据集容器内验证.assets/image-20250805120240184.png)
 
 ##### 5.5.2.2  GPU推理评测
 
