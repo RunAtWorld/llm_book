@@ -314,7 +314,7 @@ bash midea_qwen3/generate_qwen3_14b_full_intent10k_ptd.sh
 
 #### 4.4.1 NPU评测
 
-使用评测脚本qwen3_14b_full_ptd_eval_intent10k.sh
+使用评测脚本
 
 ```bash
 vim midea_qwen3/qwen3_14b_full_ptd_eval_intent10k.sh
@@ -542,7 +542,14 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora_intent10k.sh
 
 转换过程部分日志如下：
 
+![image-20250805111925230](qwen3-14B业务数据集容器内验证.assets/image-20250805111925230.png)
 
+权重合并后的目录下：
+
+```
+rwxr-xr-x. 10 root root 4096 Aug  5 11:18 iter_0000001/
+-rw-r--r--.  1 root root    1 Aug  5 11:18 latest_checkpointed_iteration.txt
+```
 
 ### 5.4 LoRA推理验证
 
@@ -561,7 +568,7 @@ vim midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k/" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k_merge/" # 指向微调后权重的保存路径
 
 ...
 
@@ -582,11 +589,56 @@ bash midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
 
 过程部分日志如下：
 
-
+![image-20250805112558208](qwen3-14B业务数据集容器内验证.assets/image-20250805112558208.png)
 
 ### 5.5 intent_10k数据集评测
 
 #### 5.5.1 NPU评测
+
+使用评测脚本
+
+```bash
+vim midea_qwen3/qwen3_14b_lora_ptd_eval_intent10k.sh
+```
+
+修改以下参数：
+
+```bash
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k_merge/" # 指向微调后权重的保存路径
+TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
+
+# Change for multinode config
+MASTER_ADDR=localhost
+MASTER_PORT=6000
+NNODES=1 # 集群里的节点数，以实际情况填写,
+NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+NPUS_PER_NODE=8
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+
+TP=2
+PP=4
+SEQ_LENGTH=4096
+
+#重点设置eval-data-path和tee的输出日志路径
+torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
+...
+         --eval-data-path "/apps/hw/datasets/midea_dataset/intent/intent_test_1k.jsonl" \
+         --eval-data-size 1000 \
+               | tee /apps/hw/exps/qwen3/midea/lora0804/generate_mcore_qwen3_14b_lora_eval_intent10k.log
+
+```
+
+然后运行评测脚本：
+
+```bash
+bash examples/mcore/qwen3/qwen3_14b_lora_ptd_eval_intent10k.sh 
+```
+
+部分评测日志如下：
+
+![image-20250805114923117](qwen3-14B业务数据集容器内验证.assets/image-20250805114923117.png)
+
+评测结果如下，准确率
 
 
 
@@ -597,8 +649,8 @@ bash midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
 若希望将lora权重合并转换为Hugging Face格式，修改合并脚本
 
 ```bash
-cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
-vim midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
+cp examples/mcore/qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh
+vim midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh
 ```
 
 将 Lora权重 合并转换为HF权重的示例参数：
@@ -616,7 +668,7 @@ python convert_ckpt.py \
     --lora-alpha 32 \
     --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
     --load-dir /apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
-    --lora-load /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4/ \
+    --lora-load /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k/ \
     --save-dir /apps/hw/weights/Qwen3-14B/ \
     --model-type-hf qwen3
 ```
@@ -631,7 +683,7 @@ python convert_ckpt.py \
 启动转换脚本：
 
 ```shell
-bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora.sh
+bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh | tee /apps/hw/exps/qwen3/midea/lora0804/ckpt_convert_qwen3_mcore2hf_lora_intent10k.log
 ```
 
 转换过程部分日志如下：
