@@ -704,12 +704,11 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh | tee /apps/hw/ex
 
 ### 6.1 预训练数据集处理
 
-通过对各种格式的数据做提前预处理，避免原始数据的反复处理加载，将所有的数据都统一存储到为.bin和.idx两个文件中。常用的预训练数据集包括alpaca、enwiki、c4等。
+通过对各种格式的数据做提前预处理，避免原始数据的反复处理加载，将所有的数据都统一存储到为.bin和.idx两个文件中，详见[预训练数据处理](https://gitee.com/ascend/MindSpeed-LLM/docs/pytorch/solutions/pretrain/pretrain_dataset.md)。常用的预训练数据集包括alpaca、enwiki、c4等。
 
 以alpaca数据集为例，进行预训练数据集示例。
 
 ```shell
-# 根据链接提供地址，通过wget获取数据集数据
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 ```
 
