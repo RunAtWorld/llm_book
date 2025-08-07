@@ -27,6 +27,9 @@ docker run \
 ```
 
 ## CANN安装
+
+> 参考：[安装CANN](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/softwareinst/instg/instg_0008.html?Mode=PmIns&InstallType=local&OS=Debian&Software=cannToolKit)
+
 ```
 2.1G    Ascend-cann-kernels-310p_8.0.RC3_linux-aarch64.run
 1.9G    Ascend-cann-toolkit_8.0.RC3_linux-aarch64.run
@@ -43,7 +46,14 @@ docker run \
 ./Ascend-cann-toolkit_8.0.RC3_linux-aarch64.run --install --quiet --nox11
 ```
 
+生效环境变量
+
+```
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+```
+
 ### 安装 cann-kernels
+
 ```
 ./Ascend-cann-kernels-310p_8.0.RC3_linux-aarch64.run --install
 ```
@@ -53,7 +63,42 @@ docker run \
 ./Ascend-cann-kernels-310p_8.0.RC3_linux-aarch64.run --install --quiet --nox11
 ```
 
+生效环境变量
+
+```
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+```
+
+### 安装 nnal -ATB算子加速库（按需）
+
+参考：[安装加速库](https://www.hiascend.com/document/detail/zh/mindie/10RC2/envdeployment/instg/mindie_instg_0014.html)
+
+检查完整性
+
+```
+./Ascend-cann-nnal_8.2.RC1_linux-aarch64.run --check
+```
+
+一般安装
+
+```
+./Ascend-cann-nnal_8.2.RC1_linux-aarch64.run --install
+```
+
+静默安装
+
+```
+./Ascend-cann-nnal_8.2.RC1_linux-aarch64.run  --install --quiet --nox11
+```
+
+生效环境变量
+
+```
+source /usr/local/Ascend/nnal/atb/set_env.sh
+```
+
 ## CANN目录下文件
+
 ```
 root@HW-Ascend-172376:/usr/local/Ascend/ascend-toolkit/8.0.RC3# du -sh *
 1.5G    aarch64-linux

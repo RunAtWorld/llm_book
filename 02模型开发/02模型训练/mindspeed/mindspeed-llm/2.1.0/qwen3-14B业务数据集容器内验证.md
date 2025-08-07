@@ -490,7 +490,7 @@ torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
 	...
     --tensorboard-dir /apps/hw/outputs/qwen3/14b/tb/lora/midea/intent10k_0804 \
     ...
-    | tee /apps/hw/exps/qwen3/midea/lora0804/tune_qwen3_14b_lora_intent10k_ptd.log
+    | tee logs/tune_qwen3_14b_lora_intent10k_ptd.log
 ```
 
 运行脚本
