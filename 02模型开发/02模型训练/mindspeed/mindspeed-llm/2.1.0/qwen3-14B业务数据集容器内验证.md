@@ -11,18 +11,18 @@
 
 相关组件配套表如下：
 
-| 软件          | 版本              | 部署方式 |
-| ------------- | ----------------- | -------- |
-| Driver        | AscendHDK 25.2.0  | 宿主机   |
-| Firmware      | AscendHDK 25.2.0  | 宿主机   |
-| Python        | 3.10              | 容器内   |
-| CANN          | CANN 8.2.0        | 容器内   |
-| Torch         | 2.6.0             | 容器内   |
-| Torch_npu     | release v7.1.0    | 容器内   |
-| MindSpeed     | 2.1.0_core_r0.8.0 | 容器内   |
-| MindSpeed-LLM | 2.1.0             | 容器内   |
-| Megatron-LM   | core_r0.8.0       | 容器内   |
-| Docker镜像OS  | Ubuntu 20.04.6    | /        |
+| 软件          | 版本                    | 部署方式 |
+| ------------- | ----------------------- | -------- |
+| Driver        | AscendHDK 25.2.0        | 宿主机   |
+| Firmware      | AscendHDK 25.2.0        | 宿主机   |
+| Python        | 3.10.18                 | 容器内   |
+| CANN          | CANN 8.2.RC1            | 容器内   |
+| Torch         | 2.6.0                   | 容器内   |
+| Torch_npu     | 2.6.0（release v7.1.0） | 容器内   |
+| MindSpeed     | 2.1.0_core_r0.8.0       | 容器内   |
+| MindSpeed-LLM | 2.1.0                   | 容器内   |
+| Megatron-LM   | core_r0.8.0             | 容器内   |
+| Docker镜像OS  | Ubuntu 20.04.6          | /        |
 
 ## 二、创建容器
 
@@ -55,7 +55,7 @@ docker run -it -u root --privileged --ipc=host \
     -v /usr/local/sbin/:/usr/local/sbin/ \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
     -v /apps/shared_storage/hw_test/hw:/apps/hw \
-    image.midea.com/caas/a3_llm_release:v2.1.2  bash
+    registry-cn-guian.midea.com/aios/a3_llm_release:v2.1.2  bash
 ```
 
 > * -p 50000:3000 暴露tensorboard端口，50000为宿主机端口号，3000为容器端口号
@@ -95,11 +95,11 @@ python convert_ckpt.py \
     --model-type GPT \
     --load-model-type hf \
     --save-model-type mg \
-    --target-tensor-parallel-size 2 \
-    --target-pipeline-parallel-size 4 \
+    --target-tensor-parallel-size 4 \
+    --target-pipeline-parallel-size 2 \
     --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
     --load-dir /apps/hw/weights/Qwen3-14B/ \
-    --save-dir /apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
+    --save-dir /apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp4pp2/ \
     --tokenizer-model /apps/hw/weights/Qwen3-14B/tokenizer.json \
     --params-dtype bf16 \
     --model-type-hf qwen3
@@ -129,11 +129,11 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 | `--model-type-hf`                 | huggingface模型类别，默认为llama2                                  |   |
 | `--params-dtype`                 | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅  |
 
-## 四、基于intent_10k数据集全参微调
+## 四、全参微调
 
 ### 4.1 数据集转换
 
-对数据集处理脚本的配置进行修改：
+本次微调基于intent_10k数据集。对intent_10k数据集处理脚本的配置进行修改：
 
 ```
 cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
@@ -240,9 +240,9 @@ TUNE_ARGS="
 
 torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
  	...
-    --tensorboard-dir /apps/hw/outputs/qwen3/14b/tb/full/midea/intent10k_0802 \
+    --tensorboard-dir /apps/hw/outputs/qwen3/14b/tb/full/midea/intent10k_0806 \
 	...
-    | tee ./logs/tune_qwen3_14b_full_intent10k_0802.log
+    | tee /apps/hw/exps/qwen3/midea/full0806/tune_qwen3_14b_full_intent10k_0806.log
 
 ```
 
@@ -323,7 +323,7 @@ vim midea_qwen3/qwen3_14b_full_ptd_eval_intent10k.sh
 修改以下参数：
 
 ```bash
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp2pp4_intent10k/" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp4pp2_intent10k/" # 指向微调后权重的保存路径
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 
 # Change for multinode config
@@ -334,8 +334,8 @@ NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, �
 NPUS_PER_NODE=8
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
-TP=2
-PP=4
+TP=4
+PP=2
 SEQ_LENGTH=4096
 
 #重点设置eval-data-path和tee的输出日志路径
@@ -364,6 +364,12 @@ Average accuracy: 0.9410000000000004
 ```
 
 ![image-20250804230139709](qwen3-14B业务数据集容器内验证.assets/image-20250804230139709.png)
+
+
+
+![image-20250806215221865](qwen3-14B业务数据集容器内验证.assets/image-20250806215221865.png)
+
+![image-20250806222223749](qwen3-14B业务数据集容器内验证.assets/image-20250806222223749.png)
 
 #### 4.4.2 NPU转GPU评测
 
@@ -444,8 +450,8 @@ NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="/apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k/"  #训练完成后的权重保存路径
+CKPT_LOAD_DIR="/apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp4pp2/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp4pp2_intent10k/"  #训练完成后的权重保存路径
 DATA_PATH="/apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k/intent"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
@@ -645,6 +651,10 @@ Average accuracy: 0.795
 ```
 
 ![image-20250805120327386](qwen3-14B业务数据集容器内验证.assets/image-20250805120327386.png)
+
+![image-20250807112228207](qwen3-14B业务数据集容器内验证.assets/image-20250807112228207.png)
+
+
 
 #### 5.5.2 NPU转GPU评测
 

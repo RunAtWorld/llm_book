@@ -20,7 +20,7 @@
 ## 二、创建容器
 
 ```bash
-docker run -it -u root --privileged --ipc=host \
+docker run -dit -u root --privileged --ipc=host \
     --name 'qwen3_14b_sft' \
     --device=/dev/davinci0 \
     --device=/dev/davinci1 \
@@ -48,7 +48,7 @@ docker run -it -u root --privileged --ipc=host \
     -v /usr/local/sbin/:/usr/local/sbin/ \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
     -v /apps:/apps \
-    image.midea.com/caas/a3_llm_release:v2.1.1  bash
+    registry-cn-guian.midea.com/aios/a3_llm_release:v2.1.2  bash
 ```
 
 > * -p 50000:3000 暴露tensorboard端口，50000为宿主机端口号，3000为容器端口号
