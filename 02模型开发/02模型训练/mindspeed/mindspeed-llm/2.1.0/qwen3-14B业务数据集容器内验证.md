@@ -1,12 +1,5 @@
 # Qwen3-14B基于业务数据集容器内验证
 
-> GPU基线：
->
-> qwen3_14B_intent_10k_5e, 8 * 80G A800 Accuracy: 0.942
-> qwen3_14B_lora_intent_10k_5e, 4 * 48G L40 Accuracy: 0.887
->
-> SFT模型权重（含 loss ）、训练参数、评估脚本跟 Qwen2.5-7B 训练好的模型在同一路径下/apps/likuan/llm_experiment/sft/
-
 ## 一、版本配套
 
 相关组件配套表如下：
@@ -55,7 +48,7 @@ docker run -it -u root --privileged --ipc=host \
     -v /usr/local/sbin/:/usr/local/sbin/ \
     -v /usr/bin/hccn_tool:/usr/bin/hccn_tool \
     -v /apps/shared_storage/hw_test/hw:/apps/hw \
-    registry-cn-guian.midea.com/aios/a3_llm_release:v2.1.2  bash
+    registry-cn-guian.midea.com/aios/a3_llm_release:v2.1.3  bash
 ```
 
 > * -p 50000:3000 暴露tensorboard端口，50000为宿主机端口号，3000为容器端口号
@@ -63,12 +56,16 @@ docker run -it -u root --privileged --ipc=host \
 > * 进入容器时会生效 .bashrc 中的环境变量，所以需要等待几秒。环境变量相关代码如下
 >
 > ```
-> PYTHONPATH=/usr/local/Ascend/ascend-toolkit/latest/python/site-packages:/usr/local/Ascend/ascend-toolkit/latest/opp/built-in/op_impl/ai_core/tbe:/home/CI_daily/Train_PT/MindSpeed-MM/decord/python:/home/CI_daily/Train_PT/MindSpeed-MM/decord/python:/home/caiyy/decord/python
+> PYTHONPATH=/usr/local/Ascend/ascend-toolkit/latest/python/site-packages:/usr/local/Ascend/ascend-toolkit/latest/opp/built-in/op_impl/ai_core/tbe
 > export LD_LIBRARY_PATH=/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:${LD_LIBRARY_PATH}
 > conda activate py310
 > source /usr/local/Ascend/ascend-toolkit/set_env.sh
+> source /usr/local/Ascend/nnal/atb/set_env.sh
 > # 解决libgomp在arm平台上的一个bug:cannot allocate memory in static TLS block
 > export LD_PRELOAD=$LD_PRELOAD:/root/miniconda3/envs/py310/lib/python3.10/site-packages/sklearn/utils/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
+> 
+> export HCCL_NPU_SOCKET_PORT_RANGE="auto"
+> export HCCL_PORT_RANGE="7015-7200"
 > ```
 
 ## 三、HF权重转为MG格式
@@ -84,7 +81,7 @@ cp examples/mcore/qwen3/ckpt_convert_qwen3_hf2mcore.sh midea_qwen3/ckpt_convert_
 vim midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 ```
 
-这里采用**TP2PP4**的切分策略，按照如下配置修改权重转换脚本
+这里采用**TP4PP2**的切分策略，按照如下配置修改权重转换脚本
 
 ```bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
@@ -201,8 +198,8 @@ NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="/apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp2pp4_intent10k/"  #训练完成后的权重保存路径
+CKPT_LOAD_DIR="/apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp4pp2/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp4pp2_intent10k/"  #训练完成后的权重保存路径
 DATA_PATH="/apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k/intent"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
@@ -285,7 +282,7 @@ vim midea_qwen3/generate_qwen3_14b_full_intent10k_ptd.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp2pp4_intent10k/" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp4pp2_intent10k/" # 指向微调后权重的保存路径
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 
 MASTER_ADDR=localhost
@@ -394,7 +391,7 @@ python convert_ckpt.py \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
-    --load-dir /apps/hw/outputs/midea/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp2pp4/ \
+    --load-dir /apps/hw/outputs/midea/qwen3/14b/save_weights_sft/qwen3_14b_mcore_tp4pp2/ \
     --save-dir /apps/hw/weights/Qwen3-14B/ \
     --params-dtype bf16 \
     --model-type-hf qwen3
@@ -532,9 +529,9 @@ python convert_ckpt.py \
     --lora-r 16 \
     --lora-alpha 32 \
     --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
-    --load-dir /apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
-    --lora-load /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k/ \
-    --save-dir /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k_merge/ \
+    --load-dir /apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp4pp2/ \
+    --lora-load /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp4pp2_intent10k/ \
+    --save-dir /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp4pp2_intent10k_merge/ \
     --model-type-hf qwen3
 ```
 
@@ -574,7 +571,7 @@ vim midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k_merge/" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp4pp2_intent10k_merge/" # 指向微调后权重的保存路径
 
 ...
 
@@ -584,7 +581,7 @@ SEQ_LENGTH=4096
 
 torchrun $DISTRIBUTED_ARGS inference.py \
 	...
-         | tee /apps/hw/exps/qwen3/midea/lora0804/generate_qwen3_14b_lora_intent10k.log
+         | tee logs/generate_qwen3_14b_lora_intent10k.log
 ```
 
 运行推理脚本：
@@ -610,7 +607,7 @@ vim midea_qwen3/qwen3_14b_lora_ptd_eval_intent10k.sh
 修改以下参数：
 
 ```bash
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k_merge/" # 指向微调后权重的保存路径
+CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp4pp2_intent10k_merge/" # 指向微调后权重的保存路径
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
 
 # Change for multinode config
@@ -630,7 +627,7 @@ torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
 ...
          --eval-data-path "/apps/hw/datasets/midea_dataset/intent/intent_test_1k.jsonl" \
          --eval-data-size 1000 \
-               | tee /apps/hw/exps/qwen3/midea/lora0804/generate_mcore_qwen3_14b_lora_eval_intent10k.log
+               | tee logs/generate_mcore_qwen3_14b_lora_eval_intent10k.log
 
 ```
 
@@ -681,8 +678,8 @@ python convert_ckpt.py \
     --lora-r 16 \
     --lora-alpha 32 \
     --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 \
-    --load-dir /apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/ \
-    --lora-load /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp2pp4_intent10k/ \
+    --load-dir /apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp4pp2/ \
+    --lora-load /apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp4pp2_intent10k/ \
     --save-dir /apps/hw/weights/Qwen3-14B/ \
     --model-type-hf qwen3
 ```
@@ -697,7 +694,7 @@ python convert_ckpt.py \
 启动转换脚本：
 
 ```shell
-bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh | tee /apps/hw/exps/qwen3/midea/lora0804/ckpt_convert_qwen3_mcore2hf_lora_intent10k.log
+bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh | tee logs/ckpt_convert_qwen3_mcore2hf_lora_intent10k.log
 ```
 
 转换过程部分日志如下：
@@ -790,8 +787,8 @@ NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
 
 # 根据实际情况配置权重保存、权重加载、词表、数据集路径
-CKPT_LOAD_DIR="/apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp2pp4/"  #权重加载路径，填入权重转换时保存的权重路径
-CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp2pp4/"  #训练完成后的权重保存路径
+CKPT_LOAD_DIR="/apps/hw/outputs/midea/qwen3/14b/mg_weights/qwen3_14b_mcore_tp4pp2/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_pretrain/qwen3_14b_mcore_tp4pp2/"  #训练完成后的权重保存路径
 DATA_PATH="/apps/hw/outputs/midea/qwen3/pretrain_datasets_enwiki/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 

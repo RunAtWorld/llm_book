@@ -91,7 +91,7 @@ pip install transformers==4.51.0
 所有依赖都安装后，可以将环境保存为镜像以便下次使用
 
 ```
-docker commit -a "lipengfei" -m "build for mindspeed-llm 2.1.3"  qwen3_img a3_llm_poc:v2.1.3
+docker commit -a "lipengfei" -m "add nnal"  qwen3_img a3_llm_poc:v2.1.3
 ```
 
 如果不需要历史信息，将容器存储为镜像
