@@ -130,7 +130,9 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 
 ### 4.1 数据集转换
 
-本次微调基于intent_10k数据集。对intent_10k数据集处理脚本的配置进行修改：
+本次微调基于intent_10k数据集。由于涉及到think标签数据的处理，因此需要 [MindSpeed-LLM的master分支](https://gitee.com/ascend/MindSpeed-LLM/blob/master/examples/mcore/qwen3/data_convert_qwen3_instruction.sh)
+
+对intent_10k数据集处理脚本的配置进行修改：
 
 ```
 cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
@@ -142,12 +144,13 @@ vim midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
 python ./preprocess_data.py \
     --input  /apps/hw/datasets/midea_dataset/intent/intent_train_10k.jsonl \
     --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
-    --output-prefix /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k/intent \
+    --output-prefix /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k_think_qwen3/intent \
     --handler-name SharegptStyleInstructionHandler \
     --tokenizer-type PretrainedFromHF \
+    --enable-thinking true \
     --workers 4 \
     --log-interval 1000 \
-    --prompt-type qwen \
+    --prompt-type qwen3 \
     --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
 ```
 
@@ -190,7 +193,7 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
 
 # 基础配置
-NPUS_PER_NODE=8  #使用单节点的8卡NPU
+NPUS_PER_NODE=16  #使用单节点的NPU数
 MASTER_ADDR=localhost #以本节点ip地址为master_ip
 MASTER_PORT=6015 #本节点端口号为6015
 NNODES=1  #单机，即一台节点，多机即多节点
@@ -203,12 +206,12 @@ CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcor
 DATA_PATH="/apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k/intent"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
-TP=2
-PP=4
+TP=4
+PP=2
 MBS=16
 GBS=128
-SEQ_LENGTH=4096
-TRAIN_ITERS=1000 #训练1000步
+SEQ_LENGTH=800
+TRAIN_ITERS=390 #训练步数
 
 ...
 
@@ -239,11 +242,11 @@ torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
  	...
     --tensorboard-dir /apps/hw/outputs/qwen3/14b/tb/full/midea/intent10k_0806 \
 	...
-    | tee /apps/hw/exps/qwen3/midea/full0806/tune_qwen3_14b_full_intent10k_0806.log
+    | tee /apps/hw/exps/qwen3/midea/full0806/tune_qwen3_14b_full_intent10k.log
 
 ```
 
-微调脚本相关参数说明：
+微调脚本部分参数说明：
 
 - `DATA_PATH`：数据集路径。请注意实际数据预处理生成文件末尾会增加`_input_ids_document`等后缀，该参数填写到数据集的前缀即可。例如实际的数据集相对路径是`./finetune_dataset/alpaca/alpaca_packed_input_ids_document.bin`等，那么只需要填`./finetune_dataset/alpaca/alpaca`即可。
 - `is-instruction-dataset`：用于指定微调过程中采用指令微调数据集，以确保模型依据特定指令数据进行微调。
@@ -259,55 +262,32 @@ bash midea_qwen3/tune_qwen3_14b_4K_full_intent10k_ptd.sh
 
 训练过程部分日志如下：
 
-![image-20250804163739250](qwen3-14B业务数据集容器内验证.assets/image-20250804163739250.png)
+![image-20250812162146573](qwen3-14B业务数据集容器内验证.assets/image-20250812162146573.png)
 
-tensorboard监控微调loss下降如下：
+最后几步loss如下
 
-![image-20250804173025387](qwen3-14B业务数据集容器内验证.assets/image-20250804173025387.png)
+GPU数据
 
-### 4.3 全参推理验证
-
-完成微调后，需要进一步验证模型是否具备了预期的输出能力。我们提供了简单的模型生成脚本，只需要加载微调后的模型权重，便可观察模型在不同生成参数配置下的回复。
-
-使用推理脚本
-
-```bash
-cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_qwen3/generate_qwen3_14b_full_intent10k_ptd.sh
-vim midea_qwen3/generate_qwen3_14b_full_intent10k_ptd.sh
+```
+{"current_steps": 380, "total_steps": 390, "loss": 0.0001, "lr": 2.4213638345040868e-08, "epoch": 4.8192, "percentage": 97.44, "elapsed_time": "0:58:47", "remaining_time": "0:01:32"}
+{"current_steps": 390, "total_steps": 390, "loss": 0.001, "lr": 2.0027310073833516e-10, "epoch": 4.9472000000000005, "percentage": 100.0, "elapsed_time": "1:00:17", "remaining_time": "0:00:00"}
 ```
 
-修改以下参数：
+NPU数据
 
-```bash
-export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
-export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
-
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_full/qwen3_14b_mcore_tp4pp2_intent10k/" # 指向微调后权重的保存路径
-TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" # 指向模型tokenizer的路径
-
-MASTER_ADDR=localhost
-MASTER_PORT=6000
-NNODES=1 # 集群里的节点数，以实际情况填写,
-NODE_RANK=0  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
-NPUS_PER_NODE=8
-WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
-
-TP=2
-PP=4
-SEQ_LENGTH=4096
+```
+ [2025-08-11 14:57:32] iteration      380/     390 | consumed samples:        48640 | elapsed time per iteration (ms): 2542.0 | throughput per GPU (TFLOP/s/GPU): 216.3 | learning rate: 2.849003E-07 | global batch size:   128 | lm loss: 5.978334E-05 | loss scale: 1.0 | grad norm: 0.015 | number of skipped iterations:   0 | number of nan iterations:   0 |
+...
+ [2025-08-11 14:57:57] iteration      390/     390 | consumed samples:        49920 | elapsed time per iteration (ms): 2576.9 | throughput per GPU (TFLOP/s/GPU): 213.4 | learning rate: 0.000000E+00 | global batch size:   128 | lm loss: 5.801616E-05 | loss scale: 1.0 | grad norm: 0.012 | number of skipped iterations:   0 | number of nan iterations:   0 |
 ```
 
-运行推理脚本：
+Loss曲线对比如下：![image-20250812173037157](qwen3-14B业务数据集容器内验证.assets/image-20250812173037157.png)
 
-```bash
-bash midea_qwen3/generate_qwen3_14b_full_intent10k_ptd.sh
-```
+最后一个epoch的平均绝对误差：
 
-过程部分日志如下：
 
-![image-20250804221552307](qwen3-14B业务数据集容器内验证.assets/image-20250804221552307.png)
 
-### 4.4 intent_10k数据集评测
+### 4.4 数据集评测
 
 #### 4.4.1 NPU评测
 
@@ -333,7 +313,7 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 TP=4
 PP=2
-SEQ_LENGTH=4096
+SEQ_LENGTH=2048
 
 #重点设置eval-data-path和tee的输出日志路径
 torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
@@ -357,16 +337,10 @@ bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 评测结果如下，准确率
 
 ```
-Average accuracy: 0.9410000000000004
+Average accuracy: 0.942
 ```
 
-![image-20250804230139709](qwen3-14B业务数据集容器内验证.assets/image-20250804230139709.png)
-
-
-
-![image-20250806215221865](qwen3-14B业务数据集容器内验证.assets/image-20250806215221865.png)
-
-![image-20250806222223749](qwen3-14B业务数据集容器内验证.assets/image-20250806222223749.png)
+![image-20250812170820487](qwen3-14B业务数据集容器内验证.assets/image-20250812170820487.png)
 
 #### 4.4.2 NPU转GPU评测
 
@@ -416,7 +390,7 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_intent10k_mcore2hf.sh
 
 ##### 4.4.2.2  GPU推理评测
 
-
+GPU推理评测结果 
 
 ## 五、Lora微调
 
@@ -452,10 +426,10 @@ CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcor
 DATA_PATH="/apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k/intent"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
-TP=2
-PP=4
-SEQ_LENGTH=4096
-TRAIN_ITERS=2000
+TP=4
+PP=2
+SEQ_LENGTH=2048
+TRAIN_ITERS=790
 
 ...
 
@@ -500,9 +474,9 @@ bash midea_qwen3/tune_qwen3_14b_4K_lora_intent10k_ptd.sh
 
 ![image-20250804230714019](qwen3-14B业务数据集容器内验证.assets/image-20250804230714019.png)
 
-tensorboard监控微调loss下降结果如下：
+Loss曲线对比如下：
 
-![image-20250805105357659](qwen3-14B业务数据集容器内验证.assets/image-20250805105357659.png)
+![image-20250812173145167](qwen3-14B业务数据集容器内验证.assets/image-20250812173145167.png)
 
 ### 5.3 Lora权重与Base权重的合并
 
@@ -554,47 +528,7 @@ rwxr-xr-x. 10 root root 4096 Aug  5 11:18 iter_0000001/
 -rw-r--r--.  1 root root    1 Aug  5 11:18 latest_checkpointed_iteration.txt
 ```
 
-### 5.4 LoRA推理验证
-
-> 推理方法与全参微调推理方法相同
-
-编辑推理脚本
-
-```
-cp examples/mcore/qwen3/generate_qwen3_14b_ptd.sh midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
-vim midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
-```
-
-修改以下参数：
-
-```bash
-export CUDA_DEVICE_MAX_CONNECTIONS=1 #定义了任务流能够利用或映射到的硬件队列的数量。
-export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True #内存碎片优化开关，默认False
-
-CHECKPOINT="/apps/hw/outputs/midea/qwen3/14b/save_weights_lora/qwen3_14b_mcore_tp4pp2_intent10k_merge/" # 指向微调后权重的保存路径
-
-...
-
-TP=2
-PP=4
-SEQ_LENGTH=4096
-
-torchrun $DISTRIBUTED_ARGS inference.py \
-	...
-         | tee logs/generate_qwen3_14b_lora_intent10k.log
-```
-
-运行推理脚本：
-
-```bash
-bash midea_qwen3/generate_qwen3_14b_lora_intent10k_ptd.sh
-```
-
-过程部分日志如下：
-
-![image-20250805112558208](qwen3-14B业务数据集容器内验证.assets/image-20250805112558208.png)
-
-### 5.5 intent_10k数据集评测
+### 5.5 数据集评测
 
 #### 5.5.1 NPU评测
 
@@ -644,12 +578,8 @@ bash examples/mcore/qwen3/qwen3_14b_lora_ptd_eval_intent10k.sh
 评测结果如下，准确率
 
 ```
-Average accuracy: 0.795
+Average accuracy: 
 ```
-
-![image-20250805120327386](qwen3-14B业务数据集容器内验证.assets/image-20250805120327386.png)
-
-![image-20250807112228207](qwen3-14B业务数据集容器内验证.assets/image-20250807112228207.png)
 
 
 
