@@ -141,7 +141,7 @@ torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
          --make-vocab-size-divisible-by 1 \
          --padded-vocab-size 151936 \
          --rotary-base 1000000 \
-         --micro-batch-size 4 \
+         --micro-batch-size 1 \
          --disable-bias-linear \
          --swiglu \
          --use-rotary-position-embeddings \
@@ -162,7 +162,6 @@ torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
          --seed 42 \
          --bf16 \
          --eval-data-path $EVAL_DATA_PATH \
-         --rm-think \
-         --no-do-sample \
          --temperature 0.00001 \
-        | tee $eval_log_path
+         --eval-data-size 1000 \
+                        | tee $eval_log_path
