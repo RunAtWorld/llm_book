@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 export CUDA_DEVICE_MAX_CONNECTIONS=1  #定义了任务流能够利用或映射到的硬件队列的数量。
 
 # 基础配置
@@ -199,6 +200,5 @@ torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
          --seed 42 \
          --eval-data-path $EVAL_DATA_PATH \
          --eval-data-size 1000 \
-         ${LORA_ARGS} \
          --temperature 0.00001 \
          | tee $eval_log_path
