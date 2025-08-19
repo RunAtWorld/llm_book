@@ -108,7 +108,7 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 ```
 
 转换过程部分日志如下
-![image-20250802232634678](qwen3-14B业务数据集容器内验证.assets/image-20250802232634678.png)
+![image-20250819105800962](qwen3-14B业务数据集容器内验证.assets/image-20250819105800962.png)
 
 参数解析
 
@@ -130,13 +130,13 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 
 ### 4.1 数据集转换
 
-本次微调基于intent_10k数据集。由于涉及到think标签数据的处理，因此需要 [MindSpeed-LLM的master分支](https://gitee.com/ascend/MindSpeed-LLM/blob/master/examples/mcore/qwen3/data_convert_qwen3_instruction.sh)，使用镜像为 
+本次微调基于intent_10k数据集，由于涉及到think标签数据的处理，版本需使用 [MindSpeed-LLM的master分支](https://gitee.com/ascend/MindSpeed-LLM/blob/master/examples/mcore/qwen3/data_convert_qwen3_instruction.sh)。已经制作好镜像为 
 
 ```
 registry-cn-guian.midea.com/aios/a3_llm_release:master.1
 ```
 
-容器内代码目录为 /src/train25.1.0/MindSpeed-LLM
+> 容器内代码目录为 /src/train25.1.0/MindSpeed-LLM
 
 对intent_10k数据集处理脚本的配置进行修改：
 
@@ -229,7 +229,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
+    --save-interval ${TRAIN_ITERS} \
     --eval-interval ${TRAIN_ITERS} \
     --eval-iters 0 \
     --log-throughput
@@ -277,9 +277,7 @@ Loss曲线如下：
 
 ![image-20250818202510992](qwen3-14B业务数据集容器内验证.assets/image-20250818202510992.png)
 
-### 4.4 数据集评测
-
-#### 4.4.1 NPU评测
+### 4.4 数据集在NPU评测
 
 使用评测脚本
 
@@ -320,7 +318,7 @@ torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
 bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 ```
 
-
+> 评测脚本代码参考附加说明7.3
 
 部分评测日志如下：
 
@@ -334,9 +332,7 @@ Average accuracy: 0.942
 
 ![image-20250812170820487](qwen3-14B业务数据集容器内验证.assets/image-20250812170820487.png)
 
-#### 4.4.2 NPU转GPU评测
-
-##### 4.4.2.1  权重MG转为HF
+### 4.5  权重MG转为HF
 
 训练完成后，如果需要将Megatron-Mcore（MG）权重转为HuggingFace（HF）权重，修改转换脚本
 
@@ -378,11 +374,21 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_intent10k_mcore2hf.sh
 
 转换过程部分日志如下
 
+![image-20250819120501820](qwen3-14B业务数据集容器内验证.assets/image-20250819120501820.png)
 
+转换完成后，会在`/apps/hw/weights/Qwen3-14B/`目录生成  `mg2hf/` 的目录
 
-##### 4.4.2.2  GPU推理评测
-
-GPU推理评测结果 
+```
+config.json
+generation_config.json
+model-00001-of-00006.safetensors
+model-00002-of-00006.safetensors
+model-00003-of-00006.safetensors
+model-00004-of-00006.safetensors
+model-00005-of-00006.safetensors
+model-00006-of-00006.safetensors
+model.safetensors.index.json
+```
 
 ## 五、Lora微调
 
@@ -431,15 +437,13 @@ TRAIN_ARGS="
     --global-batch-size 64 \
     --lr 1.0e-5 \
     --lr-decay-style cosine \
-    --min-lr 1.25e-7 \
-    --weight-decay 1e-1 \
     --lr-warmup-fraction 0.1 \
     --attention-dropout 0.0 \
     --init-method-std 0.01 \
     --hidden-dropout 0.0 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --adam-beta2 0.95 \
+    --adam-beta2 0.999 \
     --initial-loss-scale 4096 \
     --seed 42 \
     --bf16 \
@@ -464,11 +468,11 @@ bash midea_qwen3/tune_qwen3_14b_4K_lora_intent10k_ptd.sh
 
 训练部分日志如下：
 
-![image-20250804230714019](qwen3-14B业务数据集容器内验证.assets/image-20250804230714019.png)
+![image-20250819151424271](qwen3-14B业务数据集容器内验证.assets/image-20250819151424271.png)
 
-Loss曲线对比如下：
+Loss曲线如下：
 
-![image-20250812173145167](qwen3-14B业务数据集容器内验证.assets/image-20250812173145167.png)
+![image-20250819151252964](qwen3-14B业务数据集容器内验证.assets/image-20250819151252964.png)
 
 ### 5.3 Lora权重与Base权重的合并
 
@@ -489,8 +493,8 @@ python convert_ckpt.py \
     --model-type GPT \
     --load-model-type mg \
     --save-model-type mg \
-    --target-tensor-parallel-size 2 \
-    --target-pipeline-parallel-size 4 \
+    --target-tensor-parallel-size 4 \
+    --target-pipeline-parallel-size 2 \
     --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
     --lora-r 16 \
     --lora-alpha 32 \
@@ -511,18 +515,16 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora_intent10k.sh
 
 转换过程部分日志如下：
 
-![image-20250805111925230](qwen3-14B业务数据集容器内验证.assets/image-20250805111925230.png)
+![image-20250819153019155](qwen3-14B业务数据集容器内验证.assets/image-20250819153019155.png)
 
 权重合并后的目录下：
 
 ```
-rwxr-xr-x. 10 root root 4096 Aug  5 11:18 iter_0000001/
--rw-r--r--.  1 root root    1 Aug  5 11:18 latest_checkpointed_iteration.txt
+drwxr-xr-x.  6 root root  4096 Aug 11 23:09 iter_0000001/
+-rw-r--r--.  1 root root     1 Aug 19 14:41 latest_checkpointed_iteration.txt
 ```
 
-### 5.5 数据集评测
-
-#### 5.5.1 NPU评测
+### 5.5 数据集在NPU评测
 
 使用评测脚本
 
@@ -546,7 +548,7 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 TP=2
 PP=4
-SEQ_LENGTH=4096
+SEQ_LENGTH=2048
 
 #重点设置eval-data-path和tee的输出日志路径
 torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
@@ -567,17 +569,11 @@ bash examples/mcore/qwen3/qwen3_14b_lora_ptd_eval_intent10k.sh
 
 ![image-20250805114923117](qwen3-14B业务数据集容器内验证.assets/image-20250805114923117.png)
 
-评测结果如下，准确率
+评测结果如下，准确率0.894
 
-```
-Average accuracy: 
-```
+![image-20250819144725580](qwen3-14B业务数据集容器内验证.assets/image-20250819144725580.png)
 
-
-
-#### 5.5.2 NPU转GPU评测
-
-##### 5.5.2.1 lora权重合并后转换为HF权重
+### 5.6 权重MG转为HF
 
 若希望将lora权重合并转换为Hugging Face格式，修改合并脚本
 
@@ -621,13 +617,21 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh | tee logs/ckpt_c
 
 转换过程部分日志如下：
 
-![image-20250805120240184](qwen3-14B业务数据集容器内验证.assets/image-20250805120240184.png)
+![image-20250819152217132](qwen3-14B业务数据集容器内验证.assets/image-20250819152217132.png)
 
-##### 5.5.2.2  GPU推理评测
+转换完成后，会在`/apps/hw/weights/Qwen3-14B/`目录生成  `mg2hf/` 的目录
 
-
-
-
+```
+config.json
+generation_config.json
+model-00001-of-00006.safetensors
+model-00002-of-00006.safetensors
+model-00003-of-00006.safetensors
+model-00004-of-00006.safetensors
+model-00005-of-00006.safetensors
+model-00006-of-00006.safetensors
+model.safetensors.index.json
+```
 
 ## 六、预训练
 
@@ -782,10 +786,6 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
 - 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
 - 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
-
-## 七、评测汇总
-
-
 
 ## 八、附加说明
 
