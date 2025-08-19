@@ -648,8 +648,8 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000
 修改脚本
 
 ```bash
-cp examples/mcore/qwen3/data_convert_qwen3_pretrain.sh midea_qwen3/data_convert_qwen3_pretrain.sh
-vim midea_qwen3/data_convert_qwen3_pretrain.sh
+cp examples/mcore/qwen3/data_convert_qwen3_pretrain.sh midea_qwen3/data_convert_qwen3_pretrain_enwiki.sh
+vim midea_qwen3/data_convert_qwen3_pretrain_enwiki.sh
 mkdir -p /apps/hw/outputs/midea/qwen3/pretrain_datasets_enwiki/
 ```
 
@@ -670,12 +670,12 @@ python ./preprocess_data.py \
 启动转换
 
 ```bash
-bash midea_qwen3/data_convert_qwen3_pretrain.sh
+bash midea_qwen3/data_convert_qwen3_pretrain_enwiki.sh
 ```
 
 转换过程如下：
 
-
+![image-20250819155554445](qwen3-14B业务数据集容器内验证.assets/image-20250819155554445.png)
 
 参数解析如下：
 
@@ -719,7 +719,7 @@ DATA_PATH="/apps/hw/outputs/midea/qwen3/pretrain_datasets_enwiki/enwiki_text_doc
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
 TP=4  #tensor-parallel
-PP=2  #target-pipeline-parallel
+PP=2  #pipeline-parallel
 CP=1  #序列并行
 MBS=1 #设置micro-batch-size为1
 GBS=128 #设置global-batch-size为64
