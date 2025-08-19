@@ -130,21 +130,28 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_hf2mcore.sh
 
 ### 4.1 数据集转换
 
-本次微调基于intent_10k数据集。由于涉及到think标签数据的处理，因此需要 [MindSpeed-LLM的master分支](https://gitee.com/ascend/MindSpeed-LLM/blob/master/examples/mcore/qwen3/data_convert_qwen3_instruction.sh)
+本次微调基于intent_10k数据集。由于涉及到think标签数据的处理，因此需要 [MindSpeed-LLM的master分支](https://gitee.com/ascend/MindSpeed-LLM/blob/master/examples/mcore/qwen3/data_convert_qwen3_instruction.sh)，使用镜像为 
+
+```
+registry-cn-guian.midea.com/aios/a3_llm_release:master.1
+```
+
+容器内代码目录为 /src/train25.1.0/MindSpeed-LLM
 
 对intent_10k数据集处理脚本的配置进行修改：
 
 ```
-cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
+cd /src/train25.1.0/MindSpeed-LLM
+cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_qwen3/data_convert_qwen3_instruction_intent10k_qwen3_think.sh
 mkdir -p /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k
-vim midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
+vim midea_qwen3/data_convert_qwen3_instruction_intent10k_qwen3_think.sh
 ```
 
 ```shell
 python ./preprocess_data.py \
     --input  /apps/hw/datasets/midea_dataset/intent/intent_train_10k.jsonl \
     --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
-    --output-prefix /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k_think_qwen3/intent \
+    --output-prefix /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k_qwen3_think/intent \
     --handler-name SharegptStyleInstructionHandler \
     --tokenizer-type PretrainedFromHF \
     --enable-thinking true \
@@ -157,7 +164,7 @@ python ./preprocess_data.py \
 修改后，执行脚本
 
 ```bash
-bash midea_qwen3/data_convert_qwen3_instruction_intent10k.sh
+bash midea_qwen3/data_convert_qwen3_instruction_intent10k_qwen3_think.sh
 ```
 
 转换日志如下：
@@ -264,28 +271,11 @@ bash midea_qwen3/tune_qwen3_14b_4K_full_intent10k_ptd.sh
 
 ![image-20250812162146573](qwen3-14B业务数据集容器内验证.assets/image-20250812162146573.png)
 
-最后几步loss如下
-
-GPU数据
-
-```
-{"current_steps": 380, "total_steps": 390, "loss": 0.0001, "lr": 2.4213638345040868e-08, "epoch": 4.8192, "percentage": 97.44, "elapsed_time": "0:58:47", "remaining_time": "0:01:32"}
-{"current_steps": 390, "total_steps": 390, "loss": 0.001, "lr": 2.0027310073833516e-10, "epoch": 4.9472000000000005, "percentage": 100.0, "elapsed_time": "1:00:17", "remaining_time": "0:00:00"}
-```
-
-NPU数据
-
-```
- [2025-08-11 14:57:32] iteration      380/     390 | consumed samples:        48640 | elapsed time per iteration (ms): 2542.0 | throughput per GPU (TFLOP/s/GPU): 216.3 | learning rate: 2.849003E-07 | global batch size:   128 | lm loss: 5.978334E-05 | loss scale: 1.0 | grad norm: 0.015 | number of skipped iterations:   0 | number of nan iterations:   0 |
-...
- [2025-08-11 14:57:57] iteration      390/     390 | consumed samples:        49920 | elapsed time per iteration (ms): 2576.9 | throughput per GPU (TFLOP/s/GPU): 213.4 | learning rate: 0.000000E+00 | global batch size:   128 | lm loss: 5.801616E-05 | loss scale: 1.0 | grad norm: 0.012 | number of skipped iterations:   0 | number of nan iterations:   0 |
-```
-
-Loss曲线对比如下：![image-20250812173037157](qwen3-14B业务数据集容器内验证.assets/image-20250812173037157.png)
-
-最后一个epoch的平均绝对误差：
 
 
+Loss曲线如下：
+
+![image-20250818202510992](qwen3-14B业务数据集容器内验证.assets/image-20250818202510992.png)
 
 ### 4.4 数据集评测
 
@@ -324,11 +314,13 @@ torchrun $DISTRIBUTED_ARGS inference_4_midea_test.py \
 
 ```
 
-然后运行评测脚本：
+运行评测脚本：
 
 ```bash
 bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 ```
+
+
 
 部分评测日志如下：
 
@@ -836,3 +828,252 @@ WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 | `--model-type-hf`                 | huggingface模型类别，默认为llama2                            |      |
 | `--params-dtype`                  | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅    |
 | `--tensorboard-dir`               | 开启tensorboard数据收集并指定tensorboard的事件存储目录，如` ./tb `。查看训练loss曲线使用方法为 `tensorboard --logdir=./tb --port=3000` |      |
+
+### 7.3 评测脚本适配
+
+`inference_4_midea_test.py` 的代码如下：
+
+```
+import argparse
+from typing import Union
+from mindspeed_llm import megatron_adaptor
+
+from evaluate_intent_mg import evaluate
+from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_with_transformer_engine_spec, \
+    get_gpt_layer_local_spec
+from megatron.core.transformer.spec_utils import import_module
+from megatron.legacy.model import GPTModel
+from megatron.training import get_args, print_rank_0
+from megatron.training.arguments import core_transformer_config_from_args
+from megatron.training.initialize import initialize_megatron
+from megatron.training.yaml_arguments import core_transformer_config_from_yaml
+from mindspeed_llm.tasks.inference.module import GPTModelInfer, MegatronModuleForCausalLM
+
+
+def model_provider(pre_process=True, post_process=True) -> Union[GPTModelInfer, GPTModel]:
+    """Builds the model.
+
+    If you set the use_mcore_models to True, it will return the mcore GPT model and if not the legacy GPT model.
+
+    Args:
+        pre_process (bool, optional): Set to true if you need to compute embedings. Defaults to True.
+        post_process (bool, optional): Set to true if you need to want to compute output logits/loss. Defaults to True.
+
+
+    Returns:
+        Union[GPTModelInfer, GPTModel]: The returned model
+    """
+    args = get_args()
+    use_te = args.transformer_impl == "transformer_engine"
+
+    if args.sequence_parallel and args.use_kv_cache:
+        raise AssertionError('Use_kv_cache can not be true in sequence_parallel mode.')
+
+    print_rank_0('building GPT model ...')
+    # Experimental loading arguments from yaml
+    if args.yaml_cfg is not None:
+        config = core_transformer_config_from_yaml(args, "language_model")
+    else:
+        config = core_transformer_config_from_args(args)
+
+    if args.use_mcore_models:
+        if args.spec is not None:
+            transformer_layer_spec = import_module(args.spec)
+        else:
+            if use_te:
+                transformer_layer_spec = get_gpt_layer_with_transformer_engine_spec(args.num_experts,
+                                                                                    args.moe_grouped_gemm)
+            else:
+                transformer_layer_spec = get_gpt_layer_local_spec(args.num_experts, args.moe_grouped_gemm)
+
+        model = GPTModelInfer(
+            config=config,
+            transformer_layer_spec=transformer_layer_spec,
+            vocab_size=args.padded_vocab_size,
+            max_sequence_length=args.max_position_embeddings,
+            pre_process=pre_process,
+            post_process=post_process,
+            fp16_lm_cross_entropy=args.fp16_lm_cross_entropy,
+            parallel_output=True if args.sequence_parallel else False,
+            share_embeddings_and_output_weights=not args.untie_embeddings_and_output_weights,
+            position_embedding_type=args.position_embedding_type,
+            rotary_percent=args.rotary_percent,
+            seq_len_interpolation_factor=args.rotary_seq_len_interpolation_factor
+        )
+    else:
+        if not args.context_parallel_size == 1:
+            raise ValueError("Context parallelism is only supported with Megatron Core!")
+
+        model = GPTModel(
+            config,
+            parallel_output=True if args.sequence_parallel else False,
+            pre_process=pre_process,
+            post_process=post_process
+        )
+
+    return model
+
+
+def extra_args_provider(parser):
+    parser.add_argument("--eval-data-path", type=str, default=None, help="Path to the evaluation data")
+    parser.add_argument("--eval-data-size", type=int, default=100, help="Number of examples to evaluate")
+    parser.add_argument("--eval-batch-size", type=int, default=10, help="Batch size for evaluation")
+    return parser
+
+def main():
+    initialize_megatron(extra_args_provider=extra_args_provider, args_defaults={'no_load_rng': True,
+                                                                                'no_load_optim': True})
+
+    args = get_args()
+
+    model = MegatronModuleForCausalLM.from_pretrained(
+        model_provider=model_provider,
+        pretrained_model_name_or_path=args.load
+    )
+
+    evaluate(model, args)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+`evaluate_intent_mg.py`
+
+```
+import json
+import random
+import time
+import re
+from math import ceil
+
+from datasets import load_dataset
+from torch import distributed as dist
+from transformers import AutoTokenizer
+
+from megatron.training import print_rank_0
+
+
+# --------------- 加载数据 ----------------
+def load_data(path, test_size):
+    if path.endswith(".json"):
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    elif path.endswith(".jsonl"):
+        with open(path, "r", encoding="utf-8") as f:
+            data = [json.loads(line) for line in f]
+    elif path.endswith(".parquet"):
+        dataset = load_dataset("parquet", data_files={"test": path})
+        data = dataset["test"].to_list()
+    else:
+        raise ValueError("Unsupported file format.")
+    if test_size is not None:
+        random.seed(42)
+        random.shuffle(data)
+        return data[:test_size]
+    return data
+
+
+# --------------- 构造对话模版 ----------------
+def convert_to_hf_chat_format(conversations):
+    return [
+        {"role": turn["role"], "content": turn["content"].strip()}
+        for turn in conversations
+        if turn["role"] in {"system", "user"}
+    ]
+
+
+def format_prompt(hf_conversation, tokenizer):
+    return tokenizer.apply_chat_template(
+        hf_conversation,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
+
+# --------------- 评估 accuracy ----------------
+def evaluate_prediction(ground_truth_list, prediction_list, prompt_list):
+    total = len(ground_truth_list)
+    correct_list = [gt == prediction for gt, prediction in zip(ground_truth_list, prediction_list)]
+    correct = sum(correct_list)
+
+    for i, (gt, pred, is_correct, prompt) in enumerate(zip(ground_truth_list, prediction_list, correct_list, prompt_list)):
+        if not is_correct:
+            print_rank_0(f"预测错误：")
+            print_rank_0(f"Prompt: {prompt}, 索引 {i}: 正确值={gt}, 预测值={pred}")
+
+    print_rank_0(f"correct / total = {correct} / {total}")
+    return correct / total
+
+
+# --------------- 评测数入口 ----------------
+def evaluate(model, args):
+    print_rank_0("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path, trust_remote_code=True)
+
+    print_rank_0("Loading data...")
+    data = load_data(args.eval_data_path, test_size=args.eval_data_size)
+    accuracy_list = []
+    for i in range(0, len(data), args.eval_batch_size):
+        bs_no = i // args.eval_batch_size + 1
+        print_rank_0(f"==============  Batch {bs_no} / {ceil(args.eval_data_size / args.eval_batch_size)} : Start ({i} + {args.eval_batch_size}) / {args.eval_data_size} =============")
+        batch_data = data[i:i + args.eval_batch_size]
+        accuracy = evaluate_one_bacth(args, batch_data, model, tokenizer)
+        accuracy_list.append(accuracy)
+        print_rank_0(f"=====>finish Batch={bs_no}, Accuracy: {accuracy}, index: {i + len(batch_data)} =======")
+
+    print_rank_0(f"eval data: {sum(accuracy_list)} / {len(accuracy_list)}")
+    print_rank_0("Average accuracy: {}".format(sum(accuracy_list) / len(accuracy_list)))
+
+
+def evaluate_one_bacth(args, data, model, tokenizer):
+    ground_truth_list = []
+    prompt_list = []
+    for example in data:
+        messages = example["messages"]
+
+        # 找到 ground truth
+        assistant_turns = [m for m in messages if m["role"] == "assistant"]
+        if not assistant_turns:
+            continue
+        ref_response = assistant_turns[0]["content"]
+        ground_truth_list.append(ref_response)
+
+        # 构造 prompt（system/user）
+        hf_conversation = convert_to_hf_chat_format(messages)
+        prompt = format_prompt(hf_conversation, tokenizer)
+        prompt_list.append(prompt)
+    # batch generating
+    outputs_list = task_do_sample(args, model, prompt_list)
+    prediction_list = [re.sub(r'<think>.*?</think>', '', outputs, flags=re.DOTALL) for outputs in outputs_list]
+    prediction_list = [outputs.strip() for outputs in prediction_list]
+    print_rank_0(f"===>ground_truth_list = {ground_truth_list}\n")
+    print_rank_0(f"===>outputs_list = {outputs_list}\n")
+    print_rank_0(f"===>prediction_list = {prediction_list}\n")
+    #accuracy = evaluate_prediction(ground_truth_list, outputs_list, prompt_list)
+    accuracy = evaluate_prediction(ground_truth_list, prediction_list, prompt_list)
+    return accuracy
+
+
+def task_do_sample(args, model, instructions: list):
+    t = time.time()
+    output = model.generate(
+        instructions,
+        do_sample=True,
+        top_k=args.top_k,
+        top_p=args.top_p,
+        temperature=args.temperature,
+        max_new_tokens=args.max_new_tokens,
+        stream=False
+    )
+
+    if dist.get_rank() == 0:
+        print_rank_0("\n================ Do Sample =================")
+        print_rank_0(f"\nYou:\n{instructions}\n\nMindSpeed-LLM:\n{output}")
+        print_rank_0("============================================")
+        print_rank_0(f"\nElapsed: {round(time.time() - t, 2)}s")
+
+    dist.barrier()
+    return output
+```
+
