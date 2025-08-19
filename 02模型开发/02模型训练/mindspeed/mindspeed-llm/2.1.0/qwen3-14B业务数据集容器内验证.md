@@ -693,8 +693,8 @@ bash midea_qwen3/data_convert_qwen3_pretrain.sh
 打开脚本
 
 ```
-cp examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh midea_qwen3/
-vim midea_qwen3/pretrain_qwen3_14b_4K_ptd.sh
+cp examples/mcore/qwen3/pretrain_qwen3_14b_4K_ptd.sh midea_qwen3/pretrain_qwen3_14b_enwiki_4K_ptd.sh
+vim midea_qwen3/pretrain_qwen3_14b_enwiki_4K_ptd.sh
 ```
 
 脚本内容修改如下：
@@ -718,8 +718,8 @@ CKPT_SAVE_DIR="/apps/hw/outputs/midea/qwen3/14b/save_weights_pretrain/qwen3_14b_
 DATA_PATH="/apps/hw/outputs/midea/qwen3/pretrain_datasets_enwiki/enwiki_text_document"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
 TOKENIZER_PATH="/apps/hw/weights/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
 
-TP=2  #权重转换设置--target-tensor-parallel-size 2，修改为2
-PP=4  #权重转换设置--target-pipeline-parallel-size 4，修改为4
+TP=4  #tensor-parallel
+PP=2  #target-pipeline-parallel
 CP=1  #序列并行
 MBS=1 #设置micro-batch-size为1
 GBS=128 #设置global-batch-size为64
@@ -730,16 +730,16 @@ CP_TYPE='ulysses_cp_algo' #序列并行算法
 
 启动脚本
 ```shell
-bash midea_qwen3/pretrain_qwen3_14b_4K_ptd.sh
+bash midea_qwen3/pretrain_qwen3_14b_enwiki_4K_ptd.sh
 ```
 
 训练日志如下：
 
-
+![image-20250819154148795](qwen3-14B业务数据集容器内验证.assets/image-20250819154148795.png)
 
 tensorboard监控微调loss下降结果如下：
 
-
+![image-20250819154242018](qwen3-14B业务数据集容器内验证.assets/image-20250819154242018.png)
 
 脚本中特性包含部分参数解释
 
