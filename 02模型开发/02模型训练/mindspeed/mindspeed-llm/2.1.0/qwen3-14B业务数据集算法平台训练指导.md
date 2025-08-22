@@ -28,64 +28,75 @@
 使用容器镜像：
 
 ```
-registry-cn-guian.midea.com/aios/a3_llm_release:v2.1.3
+registry-cn-guian.midea.com/aios/a3_llm_release:v2.1.3-aimp
+```
+
+## 二、创建任务
+
+实验环境和托管训练，根据自己的需求二选一。实验环境有vscode或jupyter界面，托管训练无界面启动任务。
+
+![image-20250821165830752](qwen3-14B业务数据集算法平台训练指导.assets/image-20250821165830752.png)
+
+### 2.1 创建实验环境任务
+
+![image-20250821170056575](qwen3-14B业务数据集算法平台训练指导.assets/image-20250821170056575.png)
+
+点击下方“确定”按钮。
+
+### 2.2 创建托管训练任务
+
+登录算法管理平台，依次点击：工作台—>模型训练—>实验环境—>新增实验环境
+
+![image-20250821150629134](qwen3-14B业务数据集算法平台训练指导.assets/image-20250821150629134.png)
+
+按照需求依次填入信息：
+
+| 配置项         | 配置值                                                       |
+| -------------- | ------------------------------------------------------------ |
+| 选择训练模板   | 自定义                                                       |
+| 镜像仓库       | registry-cn-guian.midea.com/aios/a3_llm_release:v2.1.3-aimp  |
+| 选择资源池     | 贵安华为910C托管池                                           |
+| 实例资源配置   | 按需，当前样例选择：配置4：GPU卡数8卡；CPU核数128核；内存1024GB |
+| 实例数         | 按需，当前样例选择：2                                        |
+| 开启RDMA网络   | 否                                                           |
+| 分布式训练框架 | Pytorch                                                      |
+| 环境变量       | 无                                                           |
+| 运行命令       | cd /data/share/platform_test/scripts/qwen3-14b && bash auto_qwen3_14b_4K_full_intent10k_ptd.sh |
+
+点击下方“确定”按钮。
+
+## 三、实验环境操作
+
+打开temerminal，进入目录
+
+```
+/data/share/platform_test/scripts/qwen3-14b
+```
+
+### 3.1 HF权重转为MG格式
+
+
+
+```
+mkdir -p /data/share/platform_test/outputs/qwen3/14b/mg_weights/qwen3_14b_mcore_tp4pp2/
+bash ckpt_convert_qwen3_14b_hf2mcore.sh
 ```
 
 
 
-## 二、创建容器
+### 3.2 全参微调
 
 
 
-## 三、HF权重转为MG格式
+## 四、托管训练操作
 
 
 
-## 四、全参微调
-
-### 4.1 数据集转换
-
-本次微调基于intent_10k数据集，由于涉及到think标签数据的处理，版本需使用 [MindSpeed-LLM的master分支](https://gitee.com/ascend/MindSpeed-LLM/blob/master/examples/mcore/qwen3/data_convert_qwen3_instruction.sh)。已经制作好镜像为 
+### 4.1 think数据集转换
 
 ```
-registry-cn-guian.midea.com/aios/a3_llm_release:master.1
+cd /data/share/platform_test/scripts/qwen3-14b && bash data_convert_qwen3_instruction_intent10k_qwen3.sh
 ```
-
-> 容器内代码目录为 /src/train25.1.0/MindSpeed-LLM
-
-对intent_10k数据集处理脚本的配置进行修改：
-
-```
-cd /src/train25.1.0/MindSpeed-LLM
-cp examples/mcore/qwen3/data_convert_qwen3_instruction.sh midea_qwen3/data_convert_qwen3_instruction_intent10k_qwen3_think.sh
-mkdir -p /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k
-vim midea_qwen3/data_convert_qwen3_instruction_intent10k_qwen3_think.sh
-```
-
-```shell
-source ~/.bashrc
-python ./preprocess_data.py \
-    --input  /apps/hw/datasets/midea_dataset/intent/intent_train_10k.jsonl \
-    --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
-    --output-prefix /apps/hw/outputs/midea/qwen3/finetune_dataset_intent10k_qwen3_think/intent \
-    --handler-name SharegptStyleInstructionHandler \
-    --tokenizer-type PretrainedFromHF \
-    --enable-thinking true \
-    --workers 4 \
-    --log-interval 1000 \
-    --prompt-type qwen3 \
-    --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
-```
-
-修改后，执行脚本
-
-```bash
-bash midea_qwen3/data_convert_qwen3_instruction_intent10k_qwen3_think.sh
-```
-
-转换日志如下：
-
-![image-20250802231835592](qwen3-14B业务数据集容器内验证.assets/image-20250802231835592.png)
 
 
 指令微调数据集处理结果如下：
@@ -185,13 +196,11 @@ bash midea_qwen3/tune_qwen3_14b_4K_full_intent10k_ptd.sh
 
 训练过程部分日志如下：
 
-![image-20250812162146573](qwen3-14B业务数据集容器内验证.assets/image-20250812162146573.png)
-
 
 
 Loss曲线如下：
 
-![image-20250818202510992](qwen3-14B业务数据集容器内验证.assets/image-20250818202510992.png)
+
 
 ### 4.4 数据集在NPU评测
 
@@ -238,7 +247,7 @@ bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 
 部分评测日志如下：
 
-![image-20250804230428051](qwen3-14B业务数据集容器内验证.assets/image-20250804230428051.png)
+
 
 评测结果如下，准确率
 
@@ -246,7 +255,7 @@ bash examples/mcore/qwen3/qwen3_14b_full_ptd_eval_midea_dataset.sh
 Average accuracy: 0.942
 ```
 
-![image-20250812170820487](qwen3-14B业务数据集容器内验证.assets/image-20250812170820487.png)
+
 
 ### 4.5  权重MG转为HF
 
@@ -290,7 +299,7 @@ bash midea_qwen3/ckpt_convert_qwen3_14b_intent10k_mcore2hf.sh
 
 转换过程部分日志如下
 
-![image-20250819120501820](qwen3-14B业务数据集容器内验证.assets/image-20250819120501820.png)
+
 
 转换完成后，会在`/apps/hw/weights/Qwen3-14B/`目录生成  `mg2hf/` 的目录
 
@@ -384,11 +393,11 @@ bash midea_qwen3/tune_qwen3_14b_4K_lora_intent10k_ptd.sh
 
 训练部分日志如下：
 
-![image-20250819151424271](qwen3-14B业务数据集容器内验证.assets/image-20250819151424271.png)
+
 
 Loss曲线如下：
 
-![image-20250819151252964](qwen3-14B业务数据集容器内验证.assets/image-20250819151252964.png)
+
 
 ### 5.3 Lora权重与Base权重的合并
 
@@ -431,7 +440,7 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2mcore_lora_intent10k.sh
 
 转换过程部分日志如下：
 
-![image-20250819153019155](qwen3-14B业务数据集容器内验证.assets/image-20250819153019155.png)
+
 
 权重合并后的目录下：
 
@@ -483,11 +492,11 @@ bash examples/mcore/qwen3/qwen3_14b_lora_ptd_eval_intent10k.sh
 
 部分评测日志如下：
 
-![image-20250805114923117](qwen3-14B业务数据集容器内验证.assets/image-20250805114923117.png)
+
 
 评测结果如下，准确率0.894
 
-![image-20250819144725580](qwen3-14B业务数据集容器内验证.assets/image-20250819144725580.png)
+
 
 ### 5.6 权重MG转为HF
 
@@ -533,7 +542,7 @@ bash midea_qwen3/ckpt_convert_qwen3_mcore2hf_lora_intent10k.sh | tee logs/ckpt_c
 
 转换过程部分日志如下：
 
-![image-20250819152217132](qwen3-14B业务数据集容器内验证.assets/image-20250819152217132.png)
+
 
 转换完成后，会在`/apps/hw/weights/Qwen3-14B/`目录生成  `mg2hf/` 的目录
 
@@ -553,47 +562,14 @@ model.safetensors.index.json
 
 ### 6.1 预训练数据集处理
 
-通过对各种格式的数据做提前预处理，避免原始数据的反复处理加载，将所有的数据都统一存储到为.bin和.idx两个文件中，详见[预训练数据处理](https://gitee.com/ascend/MindSpeed-LLM/docs/pytorch/solutions/pretrain/pretrain_dataset.md)。常用的预训练数据集包括alpaca、enwiki、c4等。
+这里以enwiki数据集为例
 
-以alpaca数据集为例，进行预训练数据集示例。
-
-```shell
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+```
+mkdir -p /apps/hw/outputs/qwen3/pretrain_datasets_enwiki
+bash data_convert_qwen3_pretrain_enwiki.sh
 ```
 
-修改脚本
-
-```bash
-cp examples/mcore/qwen3/data_convert_qwen3_pretrain.sh midea_qwen3/data_convert_qwen3_pretrain_enwiki.sh
-vim midea_qwen3/data_convert_qwen3_pretrain_enwiki.sh
-mkdir -p /apps/hw/outputs/midea/qwen3/pretrain_datasets_enwiki/
-```
-
-配置做如下修改：
-
-```shell
-python ./preprocess_data.py \
-    --input /apps/hw/datasets/enwiki/train-00000-of-00042-d964455e17e96d5a.parquet \
-    --tokenizer-name-or-path /apps/hw/weights/Qwen3-14B/ \
-    --tokenizer-type PretrainedFromHF \
-    --handler-name GeneralPretrainHandler \
-    --output-prefix /apps/hw/outputs/midea/qwen3/pretrain_datasets_enwiki/enwiki \
-    --json-keys text \
-    --workers 4 \
-    --log-interval 1000
-```
-
-启动转换
-
-```bash
-bash midea_qwen3/data_convert_qwen3_pretrain_enwiki.sh
-```
-
-转换过程如下：
-
-![image-20250819155554445](qwen3-14B业务数据集容器内验证.assets/image-20250819155554445.png)
-
-参数解析如下：
+部分参数解析如下：
 
 | 参数                       | 说明                                                         | 必填 |
 | -------------------------- | ------------------------------------------------------------ | ---- |
@@ -603,6 +579,10 @@ bash midea_qwen3/data_convert_qwen3_pretrain_enwiki.sh
 | `--tokenizer-model`        | 配合指定分词器模型的路径，路径具体到tokenizer.model文件      |      |
 | `--output-prefix`          | 转换后输出的数据集文件的文件名前缀                           | ✅    |
 | `--workers`                | 多进程数据集处理                                             | ✅    |
+
+运行过程截图如下
+
+![image-20250821171954780](qwen3-14B业务数据集算法平台训练指导.assets/image-20250821171954780.png)
 
 ### 6.2 预训练任务启动
 
@@ -651,7 +631,7 @@ bash midea_qwen3/pretrain_qwen3_14b_enwiki_4K_ptd.sh
 
 训练日志如下：
 
-![image-20250819154148795](qwen3-14B业务数据集容器内验证.assets/image-20250819154148795.png)
+
 
 tensorboard监控微调loss下降结果如下：
 
@@ -674,34 +654,10 @@ tensorboard监控微调loss下降结果如下：
 如果需要后台启动任务
 
 ```bash
-nohup bash midea_qwen3/pretrain_qwen3_14b_4K_ptd.sh >pretrain_qwen3_14b_4K_ptd.log 2>&1 &
+
 ```
 
-终止训练进程
 
-```bash
-pkill -9 python
-```
-
-如果是多机运行，则需要在单机的脚本上修改以下参数：
-
-```shell
-# 多机配置 
-# 根据分布式集群实际情况配置分布式参数
-GPUS_PER_NODE=8  # 每个节点的卡数
-MASTER_ADDR="your master node IP"  # 都需要修改为主节点的IP地址（不能为localhost）
-MASTER_PORT=6000
-NNODES=2  # 集群里的节点数，以实际情况填写,
-NODE_RANK="current node id"  # 当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
-WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
-```
-
-最后确保每台机器上的模型路径和数据集路径等无误后，在多个终端上同时启动预训练脚本即可开始训练。
-
-**注意**：
-
-- 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
-- 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
 
 ## 八、附加说明
 

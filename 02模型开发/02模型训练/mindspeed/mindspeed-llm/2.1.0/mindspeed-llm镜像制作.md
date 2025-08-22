@@ -125,6 +125,7 @@ pip install -r requirements.txt  # 安装其余依赖库
 以后组件安装后，保存镜像
 
 ```
-docker commit -a "MD" -m "add new cann"  qwen3_img a3_llm:v2.1.4
+docker commit -a "MD" -m "add new cann"  qwen3_img  registry-cn-guian.midea.com/aios/a3_llm:v2.1.4
+docker push registry-cn-guian.midea.com/aios/a3_llm:v2.1.4
 ```
 
