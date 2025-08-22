@@ -2610,50 +2610,372 @@ bash scripts/qwen25_7b_instruct/ckpt_convert_qwen25_mcore2hf_4_lora_eval.sh
 
 ### 一、前期准备
 
-#### 1.1 脚本准备
+#### 1.1. 脚本准备
 
 已准备了Qwen3-14B模型的训练验证脚本，包括数据预处理、模型格式转换、全参微调和LoRA微调等功能，放在到`/data/share/platform_test/scripts/qwen3-14b`路径下。
 
 ```shell
 /data/share/platform_test/scripts/qwen3-14b#
-    ├── [1.1K]  ckpt_convert_qwen3_14b_hf2mcore.sh   # 将HF权重转换为Mcore格式(TP=4, PP=2)
-    ├── [1.1K]  ckpt_convert_qwen3_lora_merge.sh  # Lora微调Lora权重合并脚本
-    ├── [1.0K]  ckpt_convert_qwen3_mcore2hf_full.sh  # 将全参微调的Mcore权重转换为HF格式
-    ├── [1014]  ckpt_convert_qwen3_mcore2hf_lora.sh  # 将全参微调的Mcore权重转换为HF格式
-    ├── [1.1K]  data_convert_qwen3_instruction_intent10k_qwen3.sh # qwen3 intent慢思考数据转换脚本
-    ├── [ 853]  data_convert_qwen3_pretrain_enwiki.sh # 预训练enwiki数据转换脚本
-    ├── [2.7K]  eval_qwen3_14b_full_intent10k.sh  # 全参微调的评测脚本
-    ├── [2.7K]  eval_qwen3_14b_lora_intent10k.sh  # Lora微调的评测脚本
-    ├── [4.1K]  pretrain_qwen3_14b_enwiki_4K_ptd.sh # 预训练训练脚本
-    ├── [3.8K]  tune_qwen3_14b_4K_full_intent10k_ptd_2nodes.sh # 全参微调双机训练脚本
-    ├── [3.7K]  tune_qwen3_14b_4K_full_intent10k_ptd.sh   # 全参微调训练脚本
-    └── [4.1K]  tune_qwen3_14b_4K_lora_intent10k_ptd.sh   # Lora微调训练脚本
+    ├── ckpt_convert_qwen3_14b_hf2mcore.sh   # 将HF权重转换为Mcore格式(TP=4, PP=2)
+    ├── ckpt_convert_qwen3_lora_merge.sh  # Lora微调Lora权重合并脚本
+    ├── ckpt_convert_qwen3_mcore2hf_full.sh  # 将全参微调的Mcore权重转换为HF格式
+    ├── ckpt_convert_qwen3_mcore2hf_lora.sh  # 将全参微调的Mcore权重转换为HF格式
+    ├── data_convert_qwen3_instruction_intent10k_qwen3.sh # qwen3 intent慢思考数据转换脚本
+    ├── data_convert_qwen3_pretrain_enwiki.sh # 预训练enwiki数据转换脚本
+    ├── eval_qwen3_14b_full_intent10k.sh  # 全参微调的评测脚本
+    ├── eval_qwen3_14b_lora_intent10k.sh  # Lora微调的评测脚本
+    ├── pretrain_qwen3_14b_enwiki_4K_ptd.sh # 预训练训练脚本
+    ├── tune_qwen3_14b_4K_full_intent10k_ptd_2nodes.sh # 全参微调双机训练脚本
+    ├── tune_qwen3_14b_4K_full_intent10k_ptd.sh   # 全参微调训练脚本
+    └── tune_qwen3_14b_4K_lora_intent10k_ptd.sh   # Lora微调训练脚本
 ```
 
-#### 1.2 权重准备
+#### 1.2. 权重准备
 
 从HuggingFace下载模型权重Qwen3-14B，已放置在`/data/share/platform_test/models/Qwen3-14B`目录下。
 
 ```
-/data/share/platform_test/models/Qwen3-14B# tree -h
-    ├── [ 728]  config.json
-    ├── [  73]  configuration.json
-    ├── [ 239]  generation_config.json
-    ├── [1.6M]  merges.txt
-    ├── [3.6G]  model-00001-of-00008.safetensors
-    ├── [3.7G]  model-00002-of-00008.safetensors
-    ├── [3.7G]  model-00003-of-00008.safetensors
-    ├── [3.7G]  model-00004-of-00008.safetensors
-    ├── [3.7G]  model-00005-of-00008.safetensors
-    ├── [3.7G]  model-00006-of-00008.safetensors
-    ├── [3.7G]  model-00007-of-00008.safetensors
-    ├── [1.8G]  model-00008-of-00008.safetensors
-    ├── [ 36K]  model.safetensors.index.json
-    ├── [ 16K]  README.md
-    ├── [9.5K]  tokenizer_config.json
-    ├── [ 11M]  tokenizer.json
-    └── [2.6M]  vocab.json
+/data/share/platform_test/models/Qwen3-14B# 
+    ├── config.json
+    ├── configuration.json
+    ├── generation_config.json
+    ├── merges.txt
+    ├── mg2hf
+    ├── model-00001-of-00008.safetensors
+    ├── model-00002-of-00008.safetensors
+    ├── model-00003-of-00008.safetensors
+    ├── model-00004-of-00008.safetensors
+    ├── model-00005-of-00008.safetensors
+    ├── model-00006-of-00008.safetensors
+    ├── model-00007-of-00008.safetensors
+    ├── model-00008-of-00008.safetensors
+    ├── model.safetensors.index.json
+    ├── README.md
+    ├── tokenizer_config.json
+    ├── tokenizer.json
+    └── vocab.json
 ```
+
+#### 1.3. 数据集准备
+
+准备训练与测试数据集，已放在`/data/share/platform_test/datasets/`目录下
+
+```sh
+/data/share/platform_test/datasets#
+    ├── intent_test_1k.jsonl    # 测试集
+    └── intent_train_10k.jsonl  # 训练集
+```
+
+#### 1.4. 镜像准备
+
+使用镜像
+
+```
+registry-cn-guian.midea.com/aios/aimp_a3_llm_release:v2.1.5-npu-arm
+```
+
+> 说明：由于做慢思考数据，需要使用MindSpeed-LLM的master分支代码，训练使用MindSpeed-LLM的2.1.0分支代码。因此在镜像 /src/train25.1.0目录中，有MindSpeed-LLM 的2.1.0 和 master两个分支代码，分别放置在MindSpeed-LLM-2.1.0 和 MindSpeed-LLM-master目录。
+
+### 二、权重转换
+
+将Huggingface权重转换到Megatron-LM格式
+
+```
+python convert_ckpt.py \
+    --use-mcore-models \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type hf \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --load-dir ${OUTPUT_BASE_DIR}/14b/save_weights_full/qwen3_14b_mcore_tp4pp2_intent10k_qwen3_think/ \
+    --save-dir /data/share/platform_test/models/Qwen3-14B/ \
+    --params-dtype bf16 \
+    --model-type-hf qwen3
+```
+
+### 三、数据集转换
+
+由于做慢思考数据，需要使用MindSpeed-LLM的master分支代码。镜像中 `/src/train25.1.0/MindSpeed-LLM-master` 目录中
+
+```
+python ./preprocess_data.py \
+    --input  /data/share/platform_test/datasets/intent_train_10k.jsonl \
+    --tokenizer-name-or-path /data/share/platform_test/models/Qwen3-14B/ \
+    --output-prefix ${OUTPUT_BASE_DIR}/finetune_dataset_intent10k_qwen3_think/intent \
+    --handler-name SharegptStyleInstructionHandler \
+    --tokenizer-type PretrainedFromHF \
+    --enable-thinking true \
+    --workers 4 \
+    --log-interval 1000 \
+    --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}' \
+    --prompt-type qwen3 
+```
+
+### 四、全参微调
+
+启动全参微调训练，训练启动示例脚本大致如下
+
+```shell
+#基础配置
+NPUS_PER_NODE=16  #使用单节点的NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+OUTPUT_BASE_DIR=/data/private/qwen3
+mkdir -p ${OUTPUT_BASE_DIR}/14b/logs
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="${OUTPUT_BASE_DIR}/14b/mg_weights/qwen3_14b_mcore_tp4pp2/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="${OUTPUT_BASE_DIR}/14b/save_weights_full/qwen3_14b_mcore_tp4pp2_intent10k_qwen3_think/"  #训练完成后的权重保存路径
+DATA_PATH="${OUTPUT_BASE_DIR}/finetune_dataset_intent10k_qwen3_think/intent"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/data/share/platform_test/models/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
+log_path="${OUTPUT_BASE_DIR}/14b/logs/tune_qwen3_14b_4K_full_intent10k_ptd.log"
+
+TP=4
+PP=2
+MBS=16
+GBS=128
+SEQ_LENGTH=800
+TRAIN_ITERS=390 #训练步数
+
+DISTRIBUTED_ARGS="
+    --nproc_per_node $NPUS_PER_NODE \
+    --nnodes $NNODES \
+    --node_rank $NODE_RANK \
+    --master_addr $MASTER_ADDR \
+    --master_port $MASTER_PORT
+"
+
+GPT_ARGS="
+    --use-mcore-models \
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP} \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --kv-channels 128 \
+    --qk-layernorm \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --use-rotary-position-embeddings \
+    --untie-embeddings-and-output-weights \
+    --num-attention-heads 40 \
+    --ffn-hidden-size 17408 \
+    --max-position-embeddings 40960 \
+    --seq-length ${SEQ_LENGTH} \
+    --train-iters ${TRAIN_ITERS} \
+    --micro-batch-size ${MBS} \
+    --global-batch-size ${GBS} \
+    --make-vocab-size-divisible-by 1 \
+    --use-flash-attn \
+    --padded-vocab-size 151936 \
+    --rotary-base 1000000 \
+    --disable-bias-linear \
+    --swiglu \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
+    --normalization RMSNorm \
+    --position-embedding-type rope \
+    --norm-epsilon 1e-6 \
+    --hidden-dropout 0 \
+    --attention-dropout 0 \
+    --no-gradient-accumulation-fusion \
+    --attention-softmax-in-fp32 \
+    --exit-on-missing-checkpoint \
+    --no-masked-softmax-fusion \
+    --group-query-attention \
+    --num-query-groups 8 \
+    --seed 42 \
+    --bf16 \
+    --lr-warmup-fraction 0.1 \
+    --clip-grad 1.0 \
+    --adam-beta1 0.9 \
+    --adam-beta2 0.999 \
+    --no-load-optim \
+    --no-load-rng \
+    --lr 1.0e-5 \
+    --sequence-parallel
+"
+
+DATA_ARGS="
+    --data-path $DATA_PATH \
+    --split 100,0,0
+"
+
+OUTPUT_ARGS="
+    --log-interval 1 \
+    --save-interval ${TRAIN_ITERS} \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --log-throughput
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --prompt-type qwen \
+    --variable-seq-lengths
+"
+
+torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
+    $GPT_ARGS \
+    $DATA_ARGS \
+    $OUTPUT_ARGS \
+    $TUNE_ARGS \
+    --tensorboard-dir ${OUTPUT_BASE_DIR}/14b/tb/full/intent10k \
+    --distributed-backend nccl \
+    --load ${CKPT_LOAD_DIR} \
+    --save ${CKPT_SAVE_DIR} \
+    | tee $log_path
+```
+
+
+
+### 五、Lora微调
+
+启动Lora微调训练，训练启动示例脚本大致如下
+
+```shell
+# 基础配置
+NPUS_PER_NODE=8  #使用单节点的8卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6015 #本节点端口号为6014
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+OUTPUT_BASE_DIR=/data/private/qwen3
+mkdir -p ${OUTPUT_BASE_DIR}/14b/logs
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="${OUTPUT_BASE_DIR}/14b/mg_weights/qwen3_14b_mcore_tp4pp2/"  #权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="${OUTPUT_BASE_DIR}/14b/save_weights_lora/qwen3_14b_mcore_tp4pp2_intent10k_qwen3_think/"  #训练完成后的权重保存路径
+DATA_PATH="${OUTPUT_BASE_DIR}/finetune_dataset_intent10k_qwen3_think/intent"  #数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/data/share/platform_test/models/Qwen3-14B/" #词表路径，填入下载的开源权重词表路径
+log_path="${OUTPUT_BASE_DIR}/14b/logs/tune_qwen3_14b_4K_lora_intent10k_ptd.log"
+TP=4
+PP=2
+SEQ_LENGTH=2048
+TRAIN_ITERS=800
+
+DISTRIBUTED_ARGS="
+    --nproc_per_node $NPUS_PER_NODE \
+    --nnodes $NNODES \
+    --node_rank $NODE_RANK \
+    --master_addr $MASTER_ADDR \
+    --master_port $MASTER_PORT
+"
+
+OPTIMIZE_ARGS="
+    --use-flash-attn \
+    --use-fused-rotary-pos-emb \
+    --use-rotary-position-embeddings \
+    --use-fused-swiglu \
+    --use-fused-rmsnorm \
+    --no-masked-softmax-fusion \
+    --use-distributed-optimizer
+"
+
+TRAIN_ARGS="
+    --micro-batch-size 4 \
+    --global-batch-size 64 \
+    --lr 1.0e-5 \
+    --lr-decay-style cosine \
+    --lr-warmup-fraction 0.1 \
+    --attention-dropout 0.0 \
+    --init-method-std 0.01 \
+    --hidden-dropout 0.0 \
+    --clip-grad 1.0 \
+    --adam-beta1 0.9 \
+    --adam-beta2 0.999 \
+    --initial-loss-scale 4096 \
+    --seed 42 \
+    --bf16 \
+    --train-iters ${TRAIN_ITERS} \
+    --seq-length ${SEQ_LENGTH} \
+    --no-shared-storage
+"
+
+MODEL_PARALLEL_ARGS="
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP}
+"
+
+GPT_ARGS="
+    --use-mcore-models \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --kv-channels 128 \
+    --qk-layernorm \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
+    --max-position-embeddings ${SEQ_LENGTH} \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --ffn-hidden-size 17408 \
+    --num-attention-heads 40 \
+    --tokenizer-type PretrainedFromHF \
+    --make-vocab-size-divisible-by 1 \
+    --padded-vocab-size 151936 \
+    --rotary-base 1000000 \
+    --untie-embeddings-and-output-weights \
+    --disable-bias-linear \
+    --position-embedding-type rope \
+    --normalization RMSNorm \
+    --swiglu \
+    --attention-softmax-in-fp32 \
+    --no-gradient-accumulation-fusion \
+    --group-query-attention \
+    --num-query-groups 8
+"
+
+DATA_ARGS="
+    --data-path $DATA_PATH \
+    --split 100,0,0
+"
+
+OUTPUT_ARGS="
+    --load ${CKPT_LOAD_DIR} \
+    --save ${CKPT_SAVE_DIR} \
+    --log-interval 1 \
+    --save-interval ${TRAIN_ITERS} \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --no-load-optim \
+    --no-load-rng
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --tokenizer-not-use-fast \
+    --prompt-type qwen \
+    --variable-seq-lengths \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-fusion \
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2
+"
+
+torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
+    $GPT_ARGS \
+    $DATA_ARGS \
+    $OUTPUT_ARGS \
+    $OPTIMIZE_ARGS \
+    $TRAIN_ARGS \
+    $TUNE_ARGS \
+    $MODEL_PARALLEL_ARGS \
+    --tensorboard-dir ${OUTPUT_BASE_DIR}/14b/tb/lora/intent10k \
+    --distributed-backend nccl \
+    | tee $log_path
+```
+
+
+
+### 六、预训练
 
 
 
