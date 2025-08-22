@@ -2678,28 +2678,53 @@ registry-cn-guian.midea.com/aios/aimp_a3_llm_release:v2.1.5-npu-arm
 
 ### 二、权重转换
 
-将Huggingface权重转换到Megatron-LM格式
+将Huggingface权重转换到Megatron-LM格式。其中以TP4PP2权重转换转换脚本 `ckpt_convert_qwen3_14b_hf2mcore.sh` 
 
 ```
+OUTPUT_BASE_DIR=/data/private/qwen3
+log_path="${OUTPUT_BASE_DIR}/14b/logs/ckpt_convert_qwen3_14b_hf2mcore.log"
+mkdir -p ${OUTPUT_BASE_DIR}/14b/mg_weights/qwen3_14b_mcore_tp4pp2/
+mkdir -p ${OUTPUT_BASE_DIR}/14b/logs
+
+# 设置需要的权重转换参数
 python convert_ckpt.py \
     --use-mcore-models \
     --model-type GPT \
-    --load-model-type mg \
-    --save-model-type hf \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
+    --load-model-type hf \
+    --save-model-type mg \
+    --target-tensor-parallel-size 4 \
+    --target-pipeline-parallel-size 2 \
     --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
-    --load-dir ${OUTPUT_BASE_DIR}/14b/save_weights_full/qwen3_14b_mcore_tp4pp2_intent10k_qwen3_think/ \
-    --save-dir /data/share/platform_test/models/Qwen3-14B/ \
+    --load-dir /data/share/platform_test/models/Qwen3-14B/ \
+    --save-dir ${OUTPUT_BASE_DIR}/14b/mg_weights/qwen3_14b_mcore_tp4pp2/ \
+    --tokenizer-model /data/share/platform_test/models/Qwen3-14B/tokenizer.json \
     --params-dtype bf16 \
-    --model-type-hf qwen3
+    --model-type-hf qwen3 \
+        | tee $log_path
 ```
 
-### 三、数据集转换
-
-由于做慢思考数据，需要使用MindSpeed-LLM的master分支代码。镜像中 `/src/train25.1.0/MindSpeed-LLM-master` 目录中
+在平台托管训练下发任务，执行脚本
 
 ```
+cd /data/share/platform_test/scripts/qwen3-14b && bash ckpt_convert_qwen3_14b_hf2mcore.sh
+```
+
+结果如下
+
+
+
+### 三、微调数据集转换
+
+由于做慢思考数据，需要使用MindSpeed-LLM的master分支代码，相关master分支代码在镜像`/src/train25.1.0/MindSpeed-LLM-master` 目录。
+
+其中微调数据集转换脚本 `data_convert_qwen3_instruction_intent10k_qwen3.sh` 大致如下
+
+```
+OUTPUT_BASE_DIR=/data/private/qwen3
+mkdir -p ${OUTPUT_BASE_DIR}/finetune_dataset_intent10k_qwen3_think
+log_path="${OUTPUT_BASE_DIR}/14b/logs/data_convert_qwen3_instruction_intent10k_qwen3.log"
+mkdir -p ${OUTPUT_BASE_DIR}/14b/logs
+
 python ./preprocess_data.py \
     --input  /data/share/platform_test/datasets/intent_train_10k.jsonl \
     --tokenizer-name-or-path /data/share/platform_test/models/Qwen3-14B/ \
@@ -2710,14 +2735,28 @@ python ./preprocess_data.py \
     --workers 4 \
     --log-interval 1000 \
     --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}' \
-    --prompt-type qwen3 
+    --prompt-type qwen3 \
+        | tee $log_path
 ```
 
+在平台托管训练下发任务，执行脚本
+
+```shell
+cd /data/share/platform_test/scripts/qwen3-14b && bash data_convert_qwen3_instruction_intent10k_qwen3.sh
+```
+
+结果如下
+
+
+
 ### 四、全参微调
+
+#### 4.1 全参微调示例脚本
 
 启动全参微调训练，训练启动示例脚本大致如下
 
 ```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 #基础配置
 NPUS_PER_NODE=16  #使用单节点的NPU
 MASTER_ADDR=localhost #以本节点ip地址为master_ip
@@ -2833,17 +2872,71 @@ torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
     | tee $log_path
 ```
 
+#### 4.2 全参微调参数对齐
+
+全参微调需要下面对关键训练参数进行对齐
+
+| MindspeedLLM           | LLaMAFactory                   | 备注                                                  |
+| ---------------------- | ------------------------------ | ----------------------------------------------------- |
+| SEQ_LEN=2048           | cutoff_len=2048                | Token长度限制                                         |
+| log-interval=10        | logging_steps=10               | 打印日志频率                                          |
+| MBS=32                 | per_device_train_batch_size=32 | 需要根据显存进行配置                                  |
+| -                      | gradient_accumulation_steps=1  | MindspeedLLM梯度累计会根据MBS,GBS,DP自动计算。当前为8 |
+| GBS=256                | -                              | MindspeedLLM 与 LLaMAFactory全局batch_size            |
+| TRAIN_ITERS=200        | num_train_epochs=5             | MindspeedLLM 与 LLaMAFactory训练样本数对齐            |
+| lr=1.0e-5              | learning_rate=1.0e-5           | 学习率                                                |
+| lr-decay-style=cosine  | lr_scheduler_type=cosine       | 余弦退火学习率衰减                                    |
+| lr-warmup-fraction=0.1 | warmup_ratio=0.1               | 学习率预热                                            |
+| bf16                   | bf16=true                      | bf 训练                                               |
+
+#### 4.3 单机任务下发
+
+在平台托管训练下发任务，执行脚本
+
+```shell
+cd /data/share/platform_test/scripts/qwen3-14b && bash tune_qwen3_14b_4K_full_intent10k_ptd.sh
+```
+
+结果如下
+
+
+
+#### 4.4 多机任务下发
+
+多机场景下，需要修改以下配置
+
+```
+# 基础配置
+NPUS_PER_NODE=16  #使用单节点的8卡NPU
+MASTER_ADDR=$(cat /etc/volcano/worker.host | head -n 1 | awk '{print $1}') #以本节点ip地址为master_ip
+MASTER_PORT=6016 #本节点端口号为6015
+NNODES=${VC_WORKER_NUM}  #单机，即一台节点，多机即多节点
+NODE_RANK=${VC_TASK_INDEX}  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+```
+
+在平台托管训练下发任务，执行脚本
+
+```shell
+cd /data/share/platform_test/scripts/qwen3-14b && bash tune_qwen3_14b_4K_full_intent10k_ptd_2nodes.sh
+```
+
+结果如下
+
 
 
 ### 五、Lora微调
 
-启动Lora微调训练，训练启动示例脚本大致如下
+#### 5.1 Lora微调示例脚本
+
+Lora微调训练，训练启动示例脚本大致如下
 
 ```shell
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 # 基础配置
 NPUS_PER_NODE=8  #使用单节点的8卡NPU
 MASTER_ADDR=localhost #以本节点ip地址为master_ip
-MASTER_PORT=6015 #本节点端口号为6014
+MASTER_PORT=6015 #本节点端口号为6015
 NNODES=1  #单机，即一台节点，多机即多节点
 NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
@@ -2973,9 +3066,222 @@ torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
     | tee $log_path
 ```
 
+#### 5.2 Lora微调参数对齐
+
+Lora微调需要对下面对一些关键参数进行对齐：
+
+| MindspeedLLM                                                 | LLaMAFactory                   | 备注                                                         |
+| ------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------ |
+| lora-r=16                                                    | lora_rank: 16                  | Lora 秩                                                      |
+| lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2 | lora_target: all               | lora模块                                                     |
+| SEQ_LEN=2048                                                 | cutoff_len=2048                | Token长度限制                                                |
+| log-interval=10                                              | logging_steps=10               | 打印日志频率                                                 |
+| MBS=16                                                       | per_device_train_batch_size=32 | 需要根据显存进行配置。经过测试，目前TP4PP2最大配置16         |
+| -                                                            | gradient_accumulation_steps=1  | MindspeedLLM梯度累计会根据MBS, GBS, DP自动计算。当前梯度累计=4 |
+| GBS=64                                                       | -                              | MindspeedLLM 与 LLaMAFactory训练样本数对齐                   |
+| TRAIN_ITERS=785                                              | num_train_epochs=5             | 需要根据GBS训练epochs数计算。                                |
+| lr                                                           | learning_rate=1.0e-5           | 学习率                                                       |
+| lr-decay-style=cosine                                        | lr_scheduler_type=cosine       | 余弦退火学习率衰减                                           |
+| lr-warmup-fraction=0.1                                       | warmup_ratio=0.1               | 学习率预热                                                   |
+| bf16                                                         | bf16=true                      | bf 训练                                                      |
+
+#### 5.3 任务下发
+
+在平台托管训练下发任务，执行脚本
+
+```shell
+cd /data/share/platform_test/scripts/qwen3-14b && bash tune_qwen3_14b_4K_lora_intent10k_ptd.sh
+```
+
+结果如下
+
+
+
+#### 5.4 结果评测
+
+评测脚本`eval_qwen3_14b_lora_intent10k.sh`大致如下：
+
+```
+
+```
+
+在平台托管训练下发任务，执行脚本
+
+```shell
+cd /data/share/platform_test/scripts/qwen3-14b && bash tune_qwen3_14b_4K_lora_intent10k_ptd.sh
+```
+
+结果如下
+
 
 
 ### 六、预训练
+
+#### 6.1 数据集转换
+
+预训练数据集转换示例脚本如下
+
+```
+OUTPUT_BASE_DIR=/data/private/qwen3
+mkdir -p ${OUTPUT_BASE_DIR}/pretrain_datasets_enwiki
+log_path="${OUTPUT_BASE_DIR}/14b/logs/data_convert_qwen3_pretrain_enwiki.log"
+
+python ./preprocess_data.py \
+    --input /data/share/platform_test/datasets/enwiki/train-00000-of-00042-d964455e17e96d5a.parquet \
+    --tokenizer-name-or-path /data/share/platform_test/models/Qwen3-14B/ \
+    --tokenizer-type PretrainedFromHF \
+    --handler-name GeneralPretrainHandler \
+    --output-prefix ${OUTPUT_BASE_DIR}/pretrain_datasets_enwiki/enwiki \
+    --json-keys text \
+    --workers 4 \
+    --log-interval 1000 \
+        | tee $log_path
+```
+
+
+
+#### 6.2 预训练示例脚本
+
+预训练，训练启动示例脚本大致如下
+
+```shell
+# 基础配置
+NPUS_PER_NODE=16  #A3单节点16卡NPU
+MASTER_ADDR=localhost #以本节点ip地址为master_ip
+MASTER_PORT=6115 #本节点端口号为6015
+NNODES=1  #单机，即一台节点，多机即多节点
+NODE_RANK=0  #单机RANK为0，多机为(0,NNODES-1)，不同节点不可重复
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES)) #最终使用的NPU数
+
+OUTPUT_BASE_DIR=/data/private/qwen3
+
+# 根据实际情况配置权重保存、权重加载、词表、数据集路径
+CKPT_LOAD_DIR="${OUTPUT_BASE_DIR}/14b/mg_weights/qwen3_14b_mcore_tp4pp2/"  # 权重加载路径，填入权重转换时保存的权重路径
+CKPT_SAVE_DIR="${OUTPUT_BASE_DIR}/14b/save_weights_pretrain/qwen3_14b_mcore_tp4pp2/"                # 训练完成后的权重保存路径
+DATA_PATH="${OUTPUT_BASE_DIR}/pretrain_datasets_enwiki/enwiki_text_document"      # 数据集路径，填入数据预处理时保存的数据路径，注意需要添加后缀
+TOKENIZER_PATH="/data/share/platform_test/models/Qwen3-14B/" # 词表路径，填入下载的开源权重词表路径
+log_path="${OUTPUT_BASE_DIR}/14b/logs/pretrain_qwen3_14b_enwiki_4K_ptd.log"
+
+TP=4  
+PP=2 
+CP=1  #序列并行
+MBS=4 #设置micro-batch-size为4
+GBS=64 #设置global-batch-size为128
+SEQ_LENGTH=4096  #设置seq_length为4096 
+TRAIN_ITERS=1000000 
+CP_TYPE='ulysses_cp_algo' #序列并行算法
+
+DISTRIBUTED_ARGS="
+    --nproc_per_node $NPUS_PER_NODE \
+    --nnodes $NNODES \
+    --node_rank $NODE_RANK \
+    --master_addr $MASTER_ADDR \
+    --master_port $MASTER_PORT
+"
+
+OPTIMIZE_ARGS="
+    --use-flash-attn \
+    --use-fused-rotary-pos-emb \
+    --use-rotary-position-embeddings \
+    --use-fused-swiglu \
+    --use-fused-rmsnorm \
+    --no-masked-softmax-fusion \
+    --use-distributed-optimizer
+"
+
+TRAIN_ARGS="
+    --micro-batch-size ${MBS} \
+    --global-batch-size ${GBS} \
+    --lr 1.25e-6 \
+    --min-lr 1.25e-7 \
+    --weight-decay 1e-1 \
+    --lr-warmup-fraction 0.01 \
+    --attention-dropout 0.0 \
+    --hidden-dropout 0.0 \
+    --clip-grad 1.0 \
+    --adam-beta1 0.9 \
+    --adam-beta2 0.95 \
+    --seed 42 \
+    --bf16 \
+    --train-iters ${TRAIN_ITERS} \
+    --seq-length ${SEQ_LENGTH} \
+"
+
+MODEL_PARALLEL_ARGS="
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP} \
+    --context-parallel-size ${CP} \
+    --context-parallel-algo ${CP_TYPE} \
+"
+
+GPT_ARGS="
+    --use-mcore-models \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --kv-channels 128 \
+    --qk-layernorm \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --untie-embeddings-and-output-weights \
+    --num-attention-heads 40 \
+    --ffn-hidden-size 17408 \
+    --max-position-embeddings 40960 \
+    --make-vocab-size-divisible-by 1 \
+    --padded-vocab-size 151936 \
+    --rotary-base 1000000 \
+    --disable-bias-linear \
+    --swiglu \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
+    --normalization RMSNorm \
+    --position-embedding-type rope \
+    --norm-epsilon 1e-6 \
+    --no-gradient-accumulation-fusion \
+    --attention-softmax-in-fp32 \
+    --exit-on-missing-checkpoint \
+    --group-query-attention \
+    --num-query-groups 8 \
+    --no-load-optim \
+    --no-load-rng \
+    --tensorboard-dir /data/share/platform_test/src/llm-qwen3/MindSpeed-LLM/tb \
+    --sequence-parallel
+"
+
+DATA_ARGS="
+    --data-path $DATA_PATH \
+    --split 100,0,0
+"
+
+OUTPUT_ARGS="
+    --log-interval 1 \
+    --save-interval 20000 \
+    --eval-interval ${TRAIN_ITERS} \
+    --eval-iters 0 \
+    --log-throughput
+"
+
+torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+    $GPT_ARGS \
+    $DATA_ARGS \
+    $OUTPUT_ARGS \
+    $OPTIMIZE_ARGS \
+    $TRAIN_ARGS \
+    $MODEL_PARALLEL_ARGS \
+    --distributed-backend nccl \
+    --tensorboard-dir ${OUTPUT_BASE_DIR}/14b/tb/pretrain/enwiki \
+    --load ${CKPT_LOAD_DIR} \
+    --save ${CKPT_SAVE_DIR} \
+    | tee $log_path
+```
+
+#### 6.3 任务下发
+
+在平台托管训练下发任务，执行脚本
+
+```shell
+cd /data/share/platform_test/scripts/qwen3-14b && bash pretrain_qwen3_14b_enwiki_4K_ptd.sh
+```
+
+结果如下
 
 
 
