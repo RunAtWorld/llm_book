@@ -14,8 +14,6 @@ MindSpeedLLM是基于昇腾生态的大语言模型分布式训练框架，旨�
 
 - **后续章节**：以Qwen2.5-7B为例，详细介绍基于业务数据集GPU到NPU迁移训练的验证测试流程以及测试结果。
 
-
-
 ## 二、 测试环境
 
 本次测试基于MindCluster集群进行资源调度，创建训练任务，完成Qwen2.5-7B-Instruct在业务数据集上的全参微调以及Lora微调训练与评测。使用到的软件以及硬件环境如下：
@@ -2606,11 +2604,11 @@ bash scripts/qwen25_7b_instruct/ckpt_convert_qwen25_mcore2hf_4_lora_eval.sh
 
 ![image-20250815193814225](images/Qwen2.5_7B业务数据集训练指导_numbered/image-20250815193814225.png)
 
-## 第二部分：Qwen3-14B验证
+## 第二部分：Qwen3-14B训练验证
 
 ### 一、前期准备
 
-#### 1.1. 脚本准备
+#### 1.1. 训练脚本准备
 
 已准备了Qwen3-14B模型的训练验证脚本，包括数据预处理、模型格式转换、全参微调和LoRA微调等功能，放在到`/data/share/platform_test/scripts/qwen3-14b`路径下。
 
@@ -2675,10 +2673,23 @@ registry-cn-guian.midea.com/aios/aimp_a3_llm_release:v2.1.5-npu-arm
 ```
 
 > 说明：由于做慢思考数据，需要使用MindSpeed-LLM的master分支代码，训练使用MindSpeed-LLM的2.1.0分支代码。因此在镜像 /src/train25.1.0目录中，有MindSpeed-LLM 的2.1.0 和 master两个分支代码，分别放置在MindSpeed-LLM-2.1.0 和 MindSpeed-LLM-master目录。
+>
+> /src/train25.1.0目录如下：
+>
+> ```
+> /src/train25.1.0
+> ├── Megatron-LM    # Megatron源码，供参考，源码编译时依赖
+> ├── MindSpeed      # MindSpeed源码，供参考，源码编译时依赖
+> ├── MindSpeed-LLM  # MindSpeed-LLM的2.1.0分支源码，供参考
+> ├── MindSpeed-LLM-2.1.0 # MindSpeed-LLM的2.1.0分支源码，训练时依赖
+> └── MindSpeed-LLM-master # MindSpeed-LLM的master分支源码，训练时依赖
+> ```
 
-### 二、权重转换
+### 二、HF权重转换为MG格式
 
-将Huggingface权重转换到Megatron-LM格式。其中以TP4PP2权重转换转换脚本 `ckpt_convert_qwen3_14b_hf2mcore.sh` 
+昇腾MindSpeed-LLM要求模型权重采用Megatron-LM格式，在这里我们将原始HuggingFace权重格式转换为Megatron-Mcore格式。
+
+使用转换脚本，获取对应切分的mg权重。这里权重切分为TP4PP2，权重转换转换脚本 `ckpt_convert_qwen3_14b_hf2mcore.sh` 关键代码如下：
 
 ```
 OUTPUT_BASE_DIR=/data/private/qwen3
@@ -2703,19 +2714,56 @@ python convert_ckpt.py \
         | tee $log_path
 ```
 
+参数解析
+
+| 参数                              | 说明                                                         | 必填 |
+| --------------------------------- | ------------------------------------------------------------ | ---- |
+| `--model-type GPT`                | 指定模型类型为GPT系列                                        | ✅    |
+| `--use-mcore-models`              | 转换为Megatron-Mcore格式                                     | ✅    |
+| `--target-tensor-parallel-size`   | 张量并行度设置                                               | ✅    |
+| `--target-pipeline-parallel-size` | 流水线并行度设置                                             | ✅    |
+| `--tokenizer-model`               | 指定分词器路径                                               | ✅    |
+| `--load-model-type`               | 加载权重的类别（可以是hf、mg）                               | ✅    |
+| `--save-model-type`               | 存储权重的类别（可以是hf、mg）                               | ✅    |
+| `--load-dir`                      | 权重文件加载路径                                             | ✅    |
+| `--save-dir`                      | 权重文件保存路径                                             | ✅    |
+| `--model-type-hf`                 | huggingface模型类别，默认为llama2                            |      |
+| `--params-dtype`                  | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅    |
+
 在平台托管训练下发任务，执行脚本
 
 ```
 cd /data/share/platform_test/scripts/qwen3-14b && bash ckpt_convert_qwen3_14b_hf2mcore.sh
 ```
 
-结果如下
+运行后部分日志截图如下
 
+![image-20250823113859320](Qwen2.5_7B和Qwen3-14B业务数据集训练指导.assets/image-20250823113859320.png)
 
+转换后生成目录文件如下：
 
-### 三、微调数据集转换
+```
+/data/private/qwen3/14b/mg_weights/qwen3_14b_mcore_tp4pp2/
+├── iter_0000001
+│   ├── mp_rank_00_000
+│   ├── mp_rank_00_001
+│   ├── mp_rank_01_000
+│   ├── mp_rank_01_001
+│   ├── mp_rank_02_000
+│   ├── mp_rank_02_001
+│   ├── mp_rank_03_000
+│   └── mp_rank_03_001
+└── latest_checkpointed_iteration.txt
+```
 
-由于做慢思考数据，需要使用MindSpeed-LLM的master分支代码，相关master分支代码在镜像`/src/train25.1.0/MindSpeed-LLM-master` 目录。
+### 三、微调原始数据集转换为bin格式
+
+这里使用的数据集为intent数据集，原始数据集目录为：
+
+* 训练数据集：`/data/share/platform_test/datasets/intent_train_10k.jsonl`
+* 评测数据集：`/data/share/platform_test/datasets/intent_test_1k.jsonl`
+
+由于制作慢思考数据，需要使用MindSpeed-LLM的master分支代码，相关master分支代码已提前放置在镜像`/src/train25.1.0/MindSpeed-LLM-master` 目录。
 
 其中微调数据集转换脚本 `data_convert_qwen3_instruction_intent10k_qwen3.sh` 大致如下
 
@@ -2739,21 +2787,49 @@ python ./preprocess_data.py \
         | tee $log_path
 ```
 
+参数说明：
+
+| 参数                       | 说明                                                         | 必填 |
+| -------------------------- | ------------------------------------------------------------ | ---- |
+| `--input`                  | 输入数据文件的路径，输入数据集目录或具体文件，如果是目录，则处理全部文件, 支持 .parquet \ .csv \ .json \ .jsonl \ .txt \ .arrow 格式， 同一个文件夹下的数据格式需要保持一致 | ✅    |
+| `--tokenizer-name-or-path` | 用于分词器的预训练模型的路径。                               | ✅    |
+| `--output-prefix`          | 输出文件的前缀。预处理后的数据会被保存为多个文件（例如，后缀为.bin和.idx），这个参数指定这些文件的前缀路径。 | ✅    |
+| `--workers`                | 指定数据预处理时使用的进程数（多进程）。更多的进程数可以加快处理速度。 | ✅    |
+| `-tokenizer-type`          | 指定tokenizer的类型。                                        | ✅    |
+| `--log-interval`           | 控制日志打印的频率，例如每处理1000条数据打印一次进度日志。   | ✅    |
+| `--handler-name`           | 指定数据处理器（handler）的类名。这里使用`SharegptStyleInstructionHandler`，这是专门为类似ShareGPT格式 | ✅    |
+| `--prompt-type`            | 指定模型模板，能够让base模型微调后能具备更好的对话能力。`prompt-type`的可选项可以在[templates](https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/mindspeed_llm/tasks/preprocess/templates.py)文件内查看。 | ✅    |
+| `--map-keys`               | 参数用于配置字段映射来使用数据集。参数完整应为`'{"prompt":"instruction","query":"input","response":"output","system":"system","history":"history"}'`。其中参数的key值`"prompt"、"query"、"response"、"system"、"history"`代表数据集列映射后的属性，在代码中是固定的，不应改变，value值`"instruction"、"input"、"output"、"system"、"history"`对应数据集的列名。考虑到alpaca数据集大部分都是`["instruction", "input", "output"]`型格式，因此我们为key值`["prompt", "query", "response"]`设置了默认值。因此上面格式`--map-keys`参数可简略为`'{"system": "system","history": "history"}'`。若数据集中无`system`与`history`列，则`--map-keys`可省略。 | ✅    |
+
 在平台托管训练下发任务，执行脚本
 
 ```shell
 cd /data/share/platform_test/scripts/qwen3-14b && bash data_convert_qwen3_instruction_intent10k_qwen3.sh
 ```
 
-结果如下
+运行后部分日志截图如下
 
+![image-20250823114116049](Qwen2.5_7B和Qwen3-14B业务数据集训练指导.assets/image-20250823114116049.png)
 
+转换后生成的文件列表如下：
+
+```
+.
+├── intent_packed_attention_mask_document.bin
+├── intent_packed_attention_mask_document.idx
+├── intent_packed_input_ids_document.bin
+├── intent_packed_input_ids_document.idx
+├── intent_packed_labels_document.bin
+├── intent_packed_labels_document.idx
+├── intent_train_indexmap_49920ns_42s_shuffle_decoder_packed_idx.npy
+└── intent_train_indexmap_51200ns_42s_shuffle_decoder_packed_idx.npy
+```
 
 ### 四、全参微调
 
 #### 4.1 全参微调示例脚本
 
-启动全参微调训练，训练启动示例脚本大致如下
+启动全参微调训练，训练启动脚本关键代码如下
 
 ```shell
 export CUDA_DEVICE_MAX_CONNECTIONS=1
@@ -2872,9 +2948,9 @@ torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
     | tee $log_path
 ```
 
-#### 4.2 全参微调参数对齐
+#### 4.2 训练参数对照表
 
-全参微调需要下面对关键训练参数进行对齐
+全参微调关键训练参数MindspeedLLM与LLaMAFactory对照表如下：
 
 | MindspeedLLM           | LLaMAFactory                   | 备注                                                  |
 | ---------------------- | ------------------------------ | ----------------------------------------------------- |
@@ -2929,7 +3005,7 @@ cd /data/share/platform_test/scripts/qwen3-14b && bash tune_qwen3_14b_4K_full_in
 
 #### 5.1 Lora微调示例脚本
 
-Lora微调训练，训练启动示例脚本大致如下
+Lora微调训练，训练启动脚本关键代码如下
 
 ```shell
 export CUDA_DEVICE_MAX_CONNECTIONS=1
@@ -3066,9 +3142,9 @@ torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
     | tee $log_path
 ```
 
-#### 5.2 Lora微调参数对齐
+#### 5.2 训练参数对照表
 
-Lora微调需要对下面对一些关键参数进行对齐：
+Lora微调关键训练参数MindspeedLLM与LLaMAFactory对照表如下：
 
 | MindspeedLLM                                                 | LLaMAFactory                   | 备注                                                         |
 | ------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------ |
@@ -3119,7 +3195,7 @@ cd /data/share/platform_test/scripts/qwen3-14b && bash tune_qwen3_14b_4K_lora_in
 
 #### 6.1 数据集转换
 
-预训练数据集转换示例脚本如下
+预训练数据集转换脚本关键代码如下
 
 ```
 OUTPUT_BASE_DIR=/data/private/qwen3
@@ -3142,7 +3218,7 @@ python ./preprocess_data.py \
 
 #### 6.2 预训练示例脚本
 
-预训练，训练启动示例脚本大致如下
+预训练启动脚本关键代码如下
 
 ```shell
 # 基础配置
