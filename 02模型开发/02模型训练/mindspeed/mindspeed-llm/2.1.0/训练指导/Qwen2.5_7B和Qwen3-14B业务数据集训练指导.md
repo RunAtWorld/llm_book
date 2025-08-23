@@ -2799,7 +2799,7 @@ python ./preprocess_data.py \
 | `--log-interval`           | 控制日志打印的频率，例如每处理1000条数据打印一次进度日志。   | ✅    |
 | `--handler-name`           | 指定数据处理器（handler）的类名。这里使用`SharegptStyleInstructionHandler`，这是专门为类似ShareGPT格式 | ✅    |
 | `--prompt-type`            | 指定模型模板，能够让base模型微调后能具备更好的对话能力。`prompt-type`的可选项可以在[templates](https://gitee.com/ascend/MindSpeed-LLM/blob/2.1.0/mindspeed_llm/tasks/preprocess/templates.py)文件内查看。 | ✅    |
-| `--map-keys`               | 参数用于配置字段映射来使用数据集。参数完整应为`'{"prompt":"instruction","query":"input","response":"output","system":"system","history":"history"}'`。其中参数的key值`"prompt"、"query"、"response"、"system"、"history"`代表数据集列映射后的属性，在代码中是固定的，不应改变，value值`"instruction"、"input"、"output"、"system"、"history"`对应数据集的列名。考虑到alpaca数据集大部分都是`["instruction", "input", "output"]`型格式，因此我们为key值`["prompt", "query", "response"]`设置了默认值。因此上面格式`--map-keys`参数可简略为`'{"system": "system","history": "history"}'`。若数据集中无`system`与`history`列，则`--map-keys`可省略。 | ✅    |
+| `--map-keys`               | 参数用于配置字段映射来使用数据集。其中key值`"messages"、"tags"`代表数据集列映射后的属性，在代码中是固定的，不应改变。value值中`"conversations"`对应数据集的列名、`"from"`对应角色标志、`"human"、"gpt"、"system"、"observation"、"function_call"`对应角色种类、`"value"`对应具体内容标志。<br>OpenAI风格为`'{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'`<br>ShareGPT风格为 `'{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}'` | ✅    |
 
 在平台托管训练下发任务，执行脚本
 
@@ -3363,6 +3363,8 @@ cd /data/share/platform_test/scripts/qwen3-14b && bash pretrain_qwen3_14b_enwiki
 
 ## 第三部分： 其他参考
 
+### 3.1 相关社区及文档
+
 | 参考                                       | 链接                                                         |
 | ------------------------------------------ | ------------------------------------------------------------ |
 | 昇腾社区                                   | https://gitee.com/ascend                                     |
@@ -3373,3 +3375,5 @@ cd /data/share/platform_test/scripts/qwen3-14b && bash pretrain_qwen3_14b_enwiki
 | 基于MindSpeed LLM训练和微调Qwen2.5（教程） | https://www.hiascend.com/developer/blog/details/02115183735165287002 |
 | MindSpeed LLM开发实践（原理讲解）          | https://www.hiascend.com/developer/courses/detail/1910963014913622017 |
 | Ascend华为官网                             | https://www.hiascend.com/                                    |
+
+### 3.2 相关社区及文档
