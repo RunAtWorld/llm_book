@@ -3363,7 +3363,7 @@ cd /data/share/platform_test/scripts/qwen3-14b && bash pretrain_qwen3_14b_enwiki
 
 ## 第三部分： 其他参考
 
-### 3.1 相关社区及文档
+### 3.1 相关社区及文档链接
 
 | 参考                                       | 链接                                                         |
 | ------------------------------------------ | ------------------------------------------------------------ |
@@ -3376,4 +3376,43 @@ cd /data/share/platform_test/scripts/qwen3-14b && bash pretrain_qwen3_14b_enwiki
 | MindSpeed LLM开发实践（原理讲解）          | https://www.hiascend.com/developer/courses/detail/1910963014913622017 |
 | Ascend华为官网                             | https://www.hiascend.com/                                    |
 
-### 3.2 相关社区及文档
+### 3.2 模型训练常见环境变量说明
+
+模型训练常见环境变量说明如下
+
+| 环境变量名称                | 环境变量描述                                                 |
+| --------------------------- | ------------------------------------------------------------ |
+| ASCEND_LAUNCH_BLOCKING      | 将Host日志输出到串口,0-关闭/1-开启。                         |
+| ASCEND_SLOG_PRINT_TO_STDOUT | 设置默认日志级别,0-debug/1-info/2-warning/3-error。          |
+| HCCL_WHITELIST_DISABLE      | HCCL白名单开关,1-关闭/0-开启。                               |
+| HCCL_CONNECT_TIMEOUT        | 设置HCCL超时时间，默认值为120。                              |
+| HCCL_NPU_SOCKET_PORT_RANGE  | 配置HCCL在NPU侧使用的通信端口，支持配置为具体的端口、端口范围或者字符串“auto”。[详细参考](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/apiref/envvar/envref_07_0144.html) |
+| CUDA_DEVICE_MAX_CONNECTIONS | 定义了任务流能够利用或映射到的硬件队列的数量。               |
+| TASK_QUEUE_ENABLE           | 用于控制开启task_queue算子下发队列优化的等级，0：关闭，1：开启Level 1优化，2：开启Level 2优化。 |
+| COMBINED_ENABLE             | 设置combined标志。设置为0表示关闭此功能；设置为1表示开启，用于优化非连续两个算子组合类场景。 |
+| PYTORCH_NPU_ALLOC_CONF      | 内存碎片优化开关，默认是expandable_segments:False，使能时expandable_segments:True。 |
+| ASCEND_RT_VISIBLE_DEVICES   | 指定哪些Device对当前进程可见，支持一次指定一个或多个Device ID。通过该环境变量，可实现不修改应用程序即可调整所用Device的功能。 |
+| HCCL_SOCKET_IFNAME          | 指定hccl socket通讯走的网卡配置。                            |
+| GLOO_SOCKET_IFNAME          | 指定gloo socket通讯走的网卡配置。                            |
+| HCCL_LOGIC_SUPERPOD_ID      | 指定当前设备的逻辑超节点ID，如果走ROCE，不同多机超节点ID不同，0-N。 |
+
+### 3.3 MindSpeed-LLM训练参数说明
+
+MindSpeed-LLM训练参数常见参数说明如下
+
+| 参数                              | 说明                                                         | 必填 |
+| --------------------------------- | ------------------------------------------------------------ | ---- |
+| `--model-type GPT`                | 指定模型类型为GPT系列                                        | ✅    |
+| `--use-mcore-models`              | 转换为Megatron-Mcore格式                                     | ✅    |
+| `--target-tensor-parallel-size`   | 张量并行度设置                                               | ✅    |
+| `--target-pipeline-parallel-size` | 流水线并行度设置                                             | ✅    |
+| `--tokenizer-model`               | 指定分词器路径                                               | ✅    |
+| `--load-model-type`               | 加载权重的类别（可以是hf、mg）                               | ✅    |
+| `--save-model-type`               | 存储权重的类别（可以是hf、mg）                               | ✅    |
+| `--load-dir`                      | 权重文件加载路径                                             | ✅    |
+| `--save-dir`                      | 权重文件保存路径                                             | ✅    |
+| `--model-type-hf`                 | huggingface模型类别，默认为llama2                            |      |
+| `--params-dtype`                  | 指定权重转换后的权重精度模式，默认为fp16，如果源文件格式为bf16，则需要设置为bf16 | ✅    |
+| `--tensorboard-dir`               | 开启tensorboard数据收集并指定tensorboard的事件存储目录，如` ./tb `。查看训练loss曲线使用方法为 `tensorboard --logdir=./tb --port=3000` |      |
+
+### 
