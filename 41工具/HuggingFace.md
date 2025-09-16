@@ -24,7 +24,7 @@ huggingface-cli download --resume-download --local-dir-use-symlinks False bigsci
 (3) 下载需要登录的模型（Gated Model）
 请添加--token hf_xxx参数，其中hf_xxx是 access token，请在huggingface官网这里获取。示例：
 ```
-huggingface-cli download --token hf_xxx --resume-download --local-dir-use-symlinks False meta-
+huggingface-cli download --token hf_xxx --resume-download --local-dir-use-symlinks False bigscience/bloom-560m --local-dir bloom-560m
 ```
 
 **方法二：使用url直接下载时，将 huggingface.co 直接替换为本站域名hf-mirror.com。**使用浏览器或者 wget -c、curl -L、aria2c 等命令行方式即可。
@@ -49,6 +49,7 @@ Linux
 ```
 export HF_HUB_ENABLE_HF_TRANSFER=1
 ```
+
 Windows Powershell
 ```
 $env:HF_HUB_ENABLE_HF_TRANSFER = 1
