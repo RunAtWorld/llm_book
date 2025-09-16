@@ -1,9 +1,6 @@
-# HuggingFace
+# 使用HuggingFace下载快速下载模型
 
-## 如何快速下载huggingface模型——全方法总结
-> https://zhuanlan.zhihu.com/p/663712983
-
-### 使用镜像HF-MIRROR
+## 一、使用镜像HF-MIRROR
 > https://hf-mirror.com/
 
 **方法一：使用huggingface 官方提供的 huggingface-cli 命令行工具。**
@@ -36,7 +33,7 @@ HF_ENDPOINT=https://hf-mirror.com python your_script.py
 ```
 
 
-### 使用 hf_transfer
+## 二、使用 hf_transfer
 
 开启方法
 
@@ -59,3 +56,6 @@ $env:HF_HUB_ENABLE_HF_TRANSFER = 1
 ```
 huggingface-cli download --resume-download bigscience/bloom-560m --local-dir bloom-560m
 ```
+
+## 参考
+1. [如何快速下载huggingface模型——全方法总结](https://zhuanlan.zhihu.com/p/663712983)
