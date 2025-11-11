@@ -77,12 +77,12 @@ x = torch.randn(2,3)       'x.shape  →  [2,3]'
 y = torch.randn(2,3,4)   'y.shape  →  [2,3,4]'
 ```
 
-1. 使用方法不同
+1.使用方法不同
 
 `torch.transpose(x)`合法， `x.transpose()`合法。
 `tensor.permute(x)`**不**合法，`x.permute()`合法。
 
-2. 操作`dim`不同：`transpose()`只能一次操作两个维度；`permute()`可以一次操作多维数据，且必须传入所有维度数，因为`permute()`的参数是`int*`。
+2.操作`dim`不同：`transpose()`只能一次操作两个维度；`permute()`可以一次操作多维数据，且必须传入所有维度数，因为`permute()`的参数是`int*`。
 
 ```
 # 对于transpose
@@ -98,9 +98,9 @@ y.permute(0,1)     "error 没有传入所有维度数"
 y.permute(1,0,2)  'shape→[3,2,4]'
 ```
 
-3. `transpose()`中的`dim`没有数的大小区分；`permute()`中的`dim`有数的大小区分
+3.`transpose()`中的`dim`没有数的大小区分；`permute()`中的`dim`有数的大小区分
 
-   举例，注意后面的`shape`：
+举例，注意后面的`shape`：
 
 ```
 # 对于transpose，不区分dim大小
