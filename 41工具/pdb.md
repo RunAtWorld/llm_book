@@ -1,6 +1,87 @@
 # PDB
 
+[`pdb`](https://docs.python.org/zh-cn/3/library/pdb.html#module-pdb) 模块定义了一个交互式源代码调试器，用于 Python 程序。它支持在源码行间设置（有条件的）断点和单步执行，检视堆栈帧，列出源码列表，以及在任何堆栈帧的上下文中运行任意 Python 代码。它还支持事后调试，可以在程序控制下调用。
 
+### 启动方式
+
+#### 代码中断
+
+中断进入调试器的典型用法是插入:
+
+```
+import pdb; pdb.set_trace()
+```
+
+或者:
+
+```
+breakpoint()
+```
+
+#### 命令行接口
+
+你还可以从命令行唤起 [`pdb`](https://docs.python.org/zh-cn/3/library/pdb.html#module-pdb) 来调试其他脚本。 例如:
+
+```
+python -m pdb [-c command] (-m module | -p pid | pyfile) [args ...]
+```
+
+当作为模块被唤起时，如果被调试的程序异常退出则 pdb 将自动进入事后调试。 在事后调试之后（或程序正常退出之后），pdb 将重启程序。 自动重启会保留 pdb 的状态（如断点）并且在大多数情况下这比在退出程序的同时退出调试器更实用。
+
+- **-c**, **--command** <command>
+
+  要以在 `.pdbrc` 文件中所给出形式来执行命令；请参阅 [调试器命令](https://docs.python.org/zh-cn/3/library/pdb.html#debugger-commands)。*在 3.2 版本发生变更:* 增加了 `-c` 选项。
+
+- **-m** <module>
+
+  要以类似于 `python -m` 的方式来执行模块。 就像一个脚本那样，调试器将在模块的第一行之前暂停执行。*在 3.7 版本发生变更:* 增加了 `-m` 选项。
+
+- **-p**, **--pid** <pid>
+
+  附加到具有指定 PID 的进程。*在 3.14 版本加入.*
+
+要附加到一个运行中的 Python 进程用于远程调试，请使用 `-p` 或 `--pid` 选项并传入目标进程的 PID:
+
+```
+python -m pdb -p 1234
+```
+
+备注
+
+ 
+
+附加到一个在系统调用中被阻塞或等待I/O的进程上，只有当下一个字节码指令被执行或进程接收到一个信号时才会起作用。
+
+在调试器控制下执行一条语句的典型用法如下:
+
+```
+import pdb
+def f(x):
+    print(1 / x)
+pdb.run("f(2)")
+> <string>(1)<module>()
+(Pdb) continue
+0.5
+```
+
+检查已崩溃程序的典型用法是:
+
+```
+import pdb
+def f(x):
+    print(1 / x)
+
+f(0)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "<stdin>", line 2, in f
+ZeroDivisionError: division by zero
+pdb.pm()
+> <stdin>(2)f()
+(Pdb) p x
+0
+(Pdb)
+```
 
 ### 命令
 
@@ -16,7 +97,7 @@ break  cont       enable   jump      p         retval   u        whatis
 bt     continue   exit     l         pp        run      unalias  where 
 ```
 
-### 使用
+#### 具体命令参考
 
 - **h(elp)** [command]
 
