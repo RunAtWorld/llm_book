@@ -1,2 +1,5 @@
 bench_result/
 .obsidian/
+**/*.case
+**/*.base
+**/*.canvas
