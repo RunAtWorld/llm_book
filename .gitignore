@@ -1,5 +1,7 @@
 bench_result/
 .obsidian/
+site/
+__pycache__/
 **/*.case
 **/*.base
 **/*.canvas

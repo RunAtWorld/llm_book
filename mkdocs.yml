@@ -1,0 +1,153 @@
+site_name: LLM 大模型学习之旅
+site_description: 围绕大语言模型（LLM）系统工程的学习笔记
+site_url: https://runatworld.github.io/llm_book
+repo_name: RunAtWorld/llm_book
+repo_url: https://github.com/RunAtWorld/llm_book
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: 切换暗色模式
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: 切换亮色模式
+
+docs_dir: .
+site_dir: site
+
+nav:
+  - 首页: README.md
+  - 算力硬件:
+    - NPU 总览: 03算力硬件/01_npu/README.md
+    - 昇腾硬件架构: 03算力硬件/01_npu/昇腾硬件架构.md
+    - CANN 知识: 03算力硬件/01_npu/cann/CANN知识.md
+    - hccn_tool: 03算力硬件/01_npu/cann/hccn_tool.md
+    - 驱动安装 (openEuler): 03算力硬件/01_npu/driver/install_driver_openEuler.md
+    - 驱动安装 (910A Ubuntu): 03算力硬件/01_npu/install_910A_ubuntu20.04.md
+    - NPU 上构建 Docker: 03算力硬件/01_npu/create_docker_on_npu.md
+  - 数据工程:
+    - numpy transpose 与 permute: 01数据工程/numpy/transpose和permute.md
+  - 模型开发:
+    - 基础知识:
+      - Transformer 模型详解: 02模型开发/00基础知识/Transformer模型详解.md
+      - Attention Is All You Need: 02模型开发/00基础知识/Attention Is All You Need.md
+      - transformer: 02模型开发/00基础知识/transfomer.md
+      - Flash Attention: 02模型开发/00基础知识/flash_attention.md
+      - Norm: 02模型开发/00基础知识/Norm.md
+      - 优化器: 02模型开发/00基础知识/优化器.md
+      - 权重衰减: 02模型开发/00基础知识/ml基础/weight_deacy.md
+      - LLM 中的上下文长度: 02模型开发/00基础知识/LLM中的上下文长度.md
+      - MFU 计算公式: 02模型开发/00基础知识/大模型 MFU 计算公式.md
+      - 线性度公式: 02模型开发/00基础知识/线性度公式.md
+      - 注意力头: 02模型开发/00基础知识/注意力头.md
+      - GRPO 原理: 02模型开发/00基础知识/grpo.md
+    - 模型结构:
+      - DeepSeek V3: 02模型开发/01模型结构/01LLM模型/deepseek/deepseek_v3.md
+      - Qwen3: 02模型开发/01模型结构/01LLM模型/qwen/qwen3/qwen3.md
+    - 模型训练:
+      - 模型并行知识: 02模型开发/02模型训练/训练并行/模型并行知识.md
+      - 内存计算: 02模型开发/02模型训练/内存计算.md
+      - 固定随机性和确定性计算: 02模型开发/02模型训练/固定随机性和确定性计算.md
+      - 数据 shuffle: 02模型开发/02模型训练/数据shuffle.md
+      - FAQ: 02模型开发/02模型训练/FAQ.md
+      - MindSpeed:
+        - 总览: 02模型开发/02模型训练/mindspeed/README.md
+        - MindSpeed-LLM:
+          - 2.0.0 概述: 02模型开发/02模型训练/mindspeed/mindspeed-llm/2.0.0/mindspeed-llm-2.0.0.md
+          - Docker 指南: 02模型开发/02模型训练/mindspeed/mindspeed-llm/2.0.0/docker_guide.md
+          - Qwen2.5-7B: 02模型开发/02模型训练/mindspeed/mindspeed-llm/2.0.0/qwen2.5-7B.md
+          - Qwen3-14B: 02模型开发/02模型训练/mindspeed/mindspeed-llm/2.1.0/qwen3-14B.md
+          - Qwen3-14B 开源数据集: 02模型开发/02模型训练/mindspeed/mindspeed-llm/2.1.0/qwen3-14B-开源数据集.md
+          - Qwen3-14B 精度对齐: 02模型开发/02模型训练/mindspeed/mindspeed-llm/2.1.0/qwen3-14B精度对齐.md
+          - Qwen3-14B 问题排查: 02模型开发/02模型训练/mindspeed/mindspeed-llm/2.1.0/qwen3-14B问题.md
+        - MindSpeed-MM: 02模型开发/02模型训练/mindspeed/mindspeed-mm/mindspeed-mm.md
+        - MindSpeed-RL:
+          - 安装指南: 02模型开发/02模型训练/mindspeed/mindspeed-rl/install_guide.md
+          - 实践: 02模型开发/02模型训练/mindspeed/mindspeed-rl/mindspeed-rl_practice.md
+          - GRPO 算法: 02模型开发/02模型训练/mindspeed/mindspeed-rl/algorithms/grpo.md
+          - GRPO YAML: 02模型开发/02模型训练/mindspeed/mindspeed-rl/features/grpo_yaml.md
+          - 数据模块设计: 02模型开发/02模型训练/mindspeed/mindspeed-rl/features/data_module_design.md
+          - integrated worker: 02模型开发/02模型训练/mindspeed/mindspeed-rl/features/integrated_worker.md
+          - profiler: 02模型开发/02模型训练/mindspeed/mindspeed-rl/features/profiler.md
+          - msprobe: 02模型开发/02模型训练/mindspeed/mindspeed-rl/features/msprobe.md
+          - wandb/tensorboard 日志: 02模型开发/02模型训练/mindspeed/mindspeed-rl/features/logging_wandb_tensorboard.md
+          - R1-Zero 7B: 02模型开发/02模型训练/mindspeed/mindspeed-rl/solutions/r1_zero_qwen25_7b.md
+          - R1-Zero 32B: 02模型开发/02模型训练/mindspeed/mindspeed-rl/solutions/r1_zero_qwen25_32b.md
+        - PTA: 02模型开发/02模型训练/mindspeed/pta/pta.md
+        - Apex: 02模型开发/02模型训练/mindspeed/pta/apex.md
+        - 模型迁移: 02模型开发/02模型训练/mindspeed/模型迁移.md
+        - 精度对齐: 02模型开发/02模型训练/mindspeed/精度对齐.md
+      - MindSpore:
+        - 接入 MindSpeed: 02模型开发/02模型训练/mindspore/MindSpore接入MindSpeed.md
+        - 并行: 02模型开发/02模型训练/mindspore/ms_并行.md
+    - 模型评测: 02模型开发/03模型评测/RAEDME.md
+    - 模型推理:
+      - 推理总览: 02模型开发/04模型推理/RAEDME.md
+      - MindIE:
+        - 安装: 02模型开发/04模型推理/MindIE/README.md
+        - 推理接口: 02模型开发/04模型推理/MindIE/MindIE推理接口.md
+        - 性能调优: 02模型开发/04模型推理/MindIE/性能调优.md
+      - BGE: 02模型开发/04模型推理/BGE.md
+      - QWQ ATB-MindIE 版: 02模型开发/04模型推理/QWQ-ATB_MindIE版.md
+      - QWQ MindSpore-MindIE 版: 02模型开发/04模型推理/QWQ-MindSpore_MindIE版.md
+      - Qwen2-7B-Audio: 02模型开发/04模型推理/Qwen2-7B-Audio_ATB-MindIE.md
+      - Qwen2.5-vl-7B: 02模型开发/04模型推理/Qwen2.5-vl-7B-MindIE.md
+  - 论文:
+    - 顶会: 31论文/顶会.md
+  - 专项:
+    - 超节点概述: 51专项/511超节点/超节点概述.md
+    - 昇腾950: 51专项/511超节点/昇腾950/README.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - footnotes
+  - meta
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.tasklist
+  - pymdownx.tilde
+
+plugins:
+  - same-dir
+  - search:
+      lang:
+        - ja
+        - en
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/RunAtWorld/llm_book
