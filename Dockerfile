@@ -3,7 +3,10 @@ FROM python:3.12-slim AS deps
 
 WORKDIR /docs
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --user --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    -r requirements.txt
 
 # ---- 阶段2: 最小运行镜像 ----
 FROM python:3.12-slim
