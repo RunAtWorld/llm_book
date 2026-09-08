@@ -23,6 +23,7 @@ DrvMngGetConsoleLogLevel failed. (g_conLogLevel=3)
 dcmi model initialized failed, because the device is used. ret is -8020
 
 4. 昇腾各个组件查询方法
+
 | **组件**         | **版本**                                                     | **查看方法**                                                 | **备注** |
 | ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | -------- |
 | 驱动             | 23.0.3                                                       | cat /usr/local/Ascend/driver/version.info或者ascend-dmi -c #更全面 |          |
