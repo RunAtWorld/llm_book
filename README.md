@@ -6,6 +6,28 @@
 
 ---
 
+## 知识库全景图
+
+> 一张图看清仓库脉络：以"算力硬件 → 数据工程 → 模型开发 → 应用生态"为主线，算子开发 / 工具 / 论文 / 专项为横向支柱。
+
+```mermaid
+graph TD
+  Root[LLM 系统工程知识库] --> HW[算力硬件<br/>NPU / CANN / 集群]
+  Root --> Data[数据工程]
+  Root --> Model[模型开发]
+  Root --> App[应用开发]
+  Root --> Op[算子开发<br/>CANN / AscendC]
+  Root --> Tool[工具]
+  Root --> Paper[论文]
+  Model --> B[基础知识<br/>RoPE / KV / ZeRO ...]
+  Model --> S[模型结构<br/>LLaMA / DeepSeek / Kimi ...]
+  Model --> T[模型训练<br/>MindSpeed / RL]
+  Model --> E[模型评测]
+  Model --> I[模型推理<br/>量化 / 框架 / 部署]
+```
+
+---
+
 ## 一、算力硬件
 
 LLM 一切能力的物质基础。本仓库聚焦国产昇腾 NPU，兼顾 GPU 对比。
@@ -50,7 +72,7 @@ LLM 的理论地基，重点在 Transformer 与注意力机制。
 | 上下文长度 | [LLM 中的上下文长度](02模型开发/00基础知识/LLM中的上下文长度.md) | 长上下文挑战 |
 | 计算公式 | [MFU 计算公式](02模型开发/00基础知识/大模型%20MFU%20计算公式.md) / [线性度公式](02模型开发/00基础知识/线性度公式.md) | GPT/LLaMA/MoE 计算量、集群扩展性 |
 
-**TODO**：位置编码（RoPE/ALiBi） · 激活函数（GELU/SwiGLU） · KV Cache 与 PagedAttention · 混合精度训练（FP16/BF16/FP8） · 梯度累加与 ZeRO 优化
+**✅ 已补全**：位置编码 [RoPE/ALiBi](02模型开发/00基础知识/位置编码%20RoPE与ALiBi.md) · 激活函数 [GELU/SwiGLU](02模型开发/00基础知识/激活函数%20GELU与SwiGLU.md) · [KV Cache 与 PagedAttention](02模型开发/00基础知识/KV%20Cache与PagedAttention.md) · [混合精度 FP16/BF16/FP8](02模型开发/00基础知识/混合精度训练%20FP16%20BF16%20FP8.md) · [ZeRO 与优化器切分](02模型开发/00基础知识/ZeRO与优化器状态切分.md) · [序列并行与长上下文](02模型开发/00基础知识/序列并行与长上下文训练.md)（梯度累加已含于 ZeRO 章节）
 
 ### 2. 模型结构
 
@@ -61,7 +83,7 @@ LLM 的理论地基，重点在 Transformer 与注意力机制。
 | DeepSeek V3 | [deepseek_v3](02模型开发/01模型结构/01LLM模型/deepseek/deepseek_v3.md) | MoE、MLA、无辅助损失负载均衡 |
 | Qwen3 | [qwen3](02模型开发/01模型结构/01LLM模型/qwen/qwen3/qwen3.md) | — |
 
-**TODO**：LLaMA 系列架构演进 · Mistral / Mixtral MoE · 多模态模型结构（LLaVA、Qwen-VL） · Embedding 模型结构（BGE、M3）
+**✅ 已补全**：[LLaMA 系列架构演进](02模型开发/01模型结构/01LLM模型/llama/LLaMA系列架构演进.md) · [Mistral / Mixtral MoE](02模型开发/01模型结构/01LLM模型/mistral/Mistral与Mixtral%20MoE.md) · [多模态模型结构（LLaVA、Qwen-VL、InternVL）](02模型开发/01模型结构/01LLM模型/multimodal/多模态模型结构%20LLaVA%20Qwen-VL%20InternVL.md) · [Embedding 模型（BGE、M3）](02模型开发/01模型结构/01LLM模型/embedding/BGE与M3%20Embedding模型.md)（另见 [DeepSeek V3.1 与 R1](02模型开发/01模型结构/01LLM模型/deepseek/DeepSeek%20V3.1与R1%20推理模型.md)、[Kimi K2](02模型开发/01模型结构/01LLM模型/kimi/Kimi%20K2%20MoE.md)）
 
 ### 3. 模型训练
 
@@ -71,7 +93,7 @@ LLM 的理论地基，重点在 Transformer 与注意力机制。
 
 | 主题 | 文档 | 说明 |
 | --- | --- | --- |
-| 并行策略 | [模型并行知识](02模型开发/02模型训练/模型并行知识.md) | DP/TP/PP/CP 关系 |
+| 并行策略 | [模型并行知识](02模型开发/02模型训练/训练并行/模型并行知识.md) | DP/TP/PP/CP 关系 |
 | 内存计算 | [内存计算](02模型开发/02模型训练/内存计算.md) | A100 算力、静态/动态内存 |
 | 确定性计算 | [固定随机性和确定性计算](02模型开发/02模型训练/固定随机性和确定性计算.md) / [具身模型](02模型开发/02模型训练/具身模型固定确定性计算.assets/) | 固定随机性、排查 loss 差异 |
 | 数据加载 | [数据 shuffle](02模型开发/02模型训练/数据shuffle.md) | shuffle 对训练的影响 |
@@ -106,29 +128,63 @@ LLM 的理论地基，重点在 Transformer 与注意力机制。
 | 主题 | 文档 | 说明 |
 | --- | --- | --- |
 | 推理总览 | [模型推理](02模型开发/04模型推理/RAEDME.md) | MindIE 代码/镜像/文档 |
-| MindIE | [安装](02模型开发/04模型推理/MindIE/README.md) / [推理接口](02模型开发/04模型推理/MindIE/MindIE推理接口.md) / [性能调优](02模型开发/04模型推理/MindIE/性能调优.md) | MindIE 全流程 |
+| MindIE | [安装](02模型开发/04模型推理/01推理框架/MindIE/README.md) / [推理接口](02模型开发/04模型推理/01推理框架/MindIE/MindIE推理接口.md) / [性能调优](02模型开发/04模型推理/01推理框架/MindIE/性能调优.md) | MindIE 全流程 |
 | BGE | [BGE 模型部署](02模型开发/04模型推理/BGE.md) | Embedding 模型 |
 | QWQ | [ATB-MindIE 版](02模型开发/04模型推理/QWQ-ATB_MindIE版.md) / [MindSpore-MindIE 版](02模型开发/04模型推理/QWQ-MindSpore_MindIE版.md) | QWQ 推理 |
 | 多模态 | [Qwen2-7B-Audio](02模型开发/04模型推理/Qwen2-7B-Audio_ATB-MindIE.md) / [Qwen2.5-vl-7B](02模型开发/04模型推理/Qwen2.5-vl-7B-MindIE.md) | 音频/视觉模型推理 |
 
-**TODO**：推理优化（量化 GPTQ/AWQ/SmoothQuant、剪枝、蒸馏） · 解码策略（Greedy/Beam/Sampling/Speculative） · 推理框架对比（vLLM/TGI/TensorRT-LLM/MindIE） · 服务化部署（Continuous Batching） · 性能指标（TTFT/TPOT/Throughput）
+**✅ 已补全**：[量化推理 GPTQ/AWQ/SmoothQuant/FP8](02模型开发/04模型推理/量化推理%20GPTQ%20AWQ%20SmoothQuant%20FP8.md) · [解码策略与投机解码](02模型开发/04模型推理/解码策略与投机解码.md) · [推理框架对比 vLLM/SGLang/TensorRT-LLM/MindIE](02模型开发/04模型推理/推理框架对比%20vLLM%20SGLang%20TensorRT-LLM%20MindIE.md) · [服务化部署 Continuous Batching](02模型开发/04模型推理/服务化部署%20Continuous%20Batching.md) · [性能指标 TTFT/TPOT/Throughput](02模型开发/04模型推理/推理性能指标%20TTFT%20TPOT%20Throughput.md)
 
 ---
 
 ## 四、应用生态
 
-| 主题 | 说明 |
-| --- | --- |
-| 框架 | TODO：LangChain / LlamaIndex |
-| Agent | TODO：ReAct / AutoGPT / 多智能体 |
-| RAG | TODO：检索增强生成 |
-| Prompt | TODO：Prompt Engineering |
-| 工具调用 | TODO：Function Calling / Tool Use |
-| 编排 | TODO：LangGraph / 工作流编排 |
+本仓库已沉淀较多实践内容（详见 [04应用开发](04应用开发/README.md)）。
+
+| 主题 | 文档 | 说明 |
+| --- | --- | --- |
+| RAG | [RAG](04应用开发/01AI_Agent/01RAG/RAEDME.md) | 检索增强生成 |
+| Agent | [Manus](04应用开发/01AI_Agent/Manus.md) | 通用智能体实践 |
+| 应用编排 | [Dify](04应用开发/02应用编排/dify.md) | 低代码编排 |
+| 提示词工程 | [Google 提示工程白皮书](04应用开发/03提示词工程/Google提示工程白皮书.md) | 官方最佳实践 |
+| Skill 编写 | [如何写好 Skill](04应用开发/04skill/如何写好-Skill：一份终极实战经验手册.md) | Agent 技能工程 |
+| Harness 工程 | [README](04应用开发/05Harness工程/README.md) | 评测 / 训练 Harness |
+| 部署工具 | [ollama](04应用开发/08相关工具/03部署工具/ollama.md) | 本地推理 |
+| 前端集成 | [Open WebUI](04应用开发/08相关工具/04前端集成/open-webui.md) | 聊天界面 |
+| 周边工具 | [AI 工具](04应用开发/09周边工具/AI工具.md) / [jinja2](04应用开发/09周边工具/jinja2.md) | 生态工具 |
+
+**TODO**：LangChain / LlamaIndex · 多智能体协作（AutoGen / CrewAI）· 工作流编排（LangGraph）· Function Calling / Tool Use 系统性梳理
 
 ---
 
-## 五、参考资源
+## 五、算子开发
+
+基于 CANN / AscendC 的自定义算子开发，是昇腾性能调优的关键抓手。
+
+| 主题 | 文档 | 说明 |
+| --- | --- | --- |
+| 概览 | [CANN 算子开发](10算子开发/02_CANN算子开发/README.md) | 开发流程总览 |
+| 环境安装 | [CANN 安装](10算子开发/01_环境安装/install_cann_step_by_step.md) | 逐步安装 |
+| AscendC | [算子开发](10算子开发/02_CANN算子开发/AscendC算子开发.md) / [最佳实践](10算子开发/02_CANN算子开发/AscendC最佳实践.md) / [自定义算子](10算子开发/02_CANN算子开发/自定义算子开发.md) | 编程模型 |
+| 首个算子 | [Sinh 体验](10算子开发/02_CANN算子开发/01_第一个算子开发体验Sinh.md) | 上手示例 |
+| 性能调优 | [性能调优](10算子开发/02_CANN算子开发/性能调优.md) / [算子支持列表](10算子开发/02_CANN算子开发/算子支持列表.md) | 调优与覆盖 |
+| 基础 | [HCCL 通信原语](10算子开发/00_基础知识/HCCL通信/通信原语操作.md) / [数据格式与精度](10算子开发/00_基础知识/数据格式与精度.md) | 通信与精度 |
+
+## 六、论文
+
+- [顶会跟踪](31论文/顶会.md)：LLM / 系统 / 算力相关顶会论文速览
+
+## 七、工具
+
+- [HuggingFace](41工具/HuggingFace.md) · [pdb](41工具/pdb.md) · [学习路径](41工具/学习路径.md) · [开发工具安装配置](41工具/开发工具安装配置.md)
+
+## 八、专项
+
+- [超节点概述](51专项/511超节点/超节点概述.md) / [昇腾 950](51专项/511超节点/昇腾950/README.md)：超节点架构与新一代硬件
+
+---
+
+## 九、参考资源
 
 | 类型 | 资源 |
 | --- | --- |
@@ -143,14 +199,18 @@ LLM 的理论地基，重点在 Transformer 与注意力机制。
 ```
 LLM 系统工程
 ├── 算力硬件   NPU(GPU) 架构 / 驱动 / CANN / 集群网络
-├── 数据工程   采集 / 清洗 / 分词 / 配比 / 标注
+├── 数据工程   采集 / 清洗 / 分词 / 配比 / 标注            ← 重点补全
 ├── 模型开发
 │   ├── 基础知识   Transformer / Attention / Norm / 优化器 / 上下文长度
 │   ├── 模型结构   DeepSeek / Qwen / LLaMA / MoE / 多模态
 │   ├── 模型训练   预训练 / 微调 / RLHF / 并行策略 / MindSpeed
-│   ├── 模型评测   基准 / 框架 / 指标
+│   ├── 模型评测   基准 / 框架 / 指标                      ← 待建设
 │   └── 模型推理   MindIE / 量化 / 解码 / 服务化
-└── 应用生态   LangChain / Agent / RAG / Prompt
+├── 算子开发   CANN / AscendC / 自定义算子 / 性能调优
+├── 应用生态   RAG / Agent / 编排 / 提示词 / 部署工具
+├── 论文       顶会跟踪
+├── 工具       HuggingFace / pdb / 学习路径
+└── 专项       超节点 / 昇腾 950
 ```
 
 ---

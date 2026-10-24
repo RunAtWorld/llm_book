@@ -59,9 +59,21 @@ nav:
       - 线性度公式: 02模型开发/00基础知识/线性度公式.md
       - 注意力头: 02模型开发/00基础知识/注意力头.md
       - GRPO 原理: 02模型开发/00基础知识/grpo.md
+      - 位置编码 RoPE与ALiBi: 02模型开发/00基础知识/位置编码 RoPE与ALiBi.md
+      - KV Cache与PagedAttention: 02模型开发/00基础知识/KV Cache与PagedAttention.md
+      - 混合精度 FP16 BF16 FP8: 02模型开发/00基础知识/混合精度训练 FP16 BF16 FP8.md
+      - ZeRO与优化器切分: 02模型开发/00基础知识/ZeRO与优化器状态切分.md
+      - 序列并行与长上下文: 02模型开发/00基础知识/序列并行与长上下文训练.md
+      - 激活函数 GELU SwiGLU: 02模型开发/00基础知识/激活函数 GELU与SwiGLU.md
     - 模型结构:
       - DeepSeek V3: 02模型开发/01模型结构/01LLM模型/deepseek/deepseek_v3.md
       - Qwen3: 02模型开发/01模型结构/01LLM模型/qwen/qwen3/qwen3.md
+      - LLaMA 系列架构演进: 02模型开发/01模型结构/01LLM模型/llama/LLaMA系列架构演进.md
+      - Mistral 与 Mixtral MoE: 02模型开发/01模型结构/01LLM模型/mistral/Mistral与Mixtral MoE.md
+      - DeepSeek V3.1与R1: 02模型开发/01模型结构/01LLM模型/deepseek/DeepSeek V3.1与R1 推理模型.md
+      - Kimi K2 MoE: 02模型开发/01模型结构/01LLM模型/kimi/Kimi K2 MoE.md
+      - 多模态模型结构: 02模型开发/01模型结构/01LLM模型/multimodal/多模态模型结构 LLaVA Qwen-VL InternVL.md
+      - Embedding 模型 BGE M3: 02模型开发/01模型结构/01LLM模型/embedding/BGE与M3 Embedding模型.md
     - 模型训练:
       - 模型并行知识: 02模型开发/02模型训练/训练并行/模型并行知识.md
       - 内存计算: 02模型开发/02模型训练/内存计算.md
@@ -110,6 +122,36 @@ nav:
       - QWQ MindSpore-MindIE 版: 02模型开发/04模型推理/QWQ-MindSpore_MindIE版.md
       - Qwen2-7B-Audio: 02模型开发/04模型推理/Qwen2-7B-Audio_ATB-MindIE.md
       - Qwen2.5-vl-7B: 02模型开发/04模型推理/Qwen2.5-vl-7B-MindIE.md
+      - 量化推理: 02模型开发/04模型推理/量化推理 GPTQ AWQ SmoothQuant FP8.md
+      - 推理框架对比: 02模型开发/04模型推理/推理框架对比 vLLM SGLang TensorRT-LLM MindIE.md
+      - 解码策略与投机解码: 02模型开发/04模型推理/解码策略与投机解码.md
+      - 服务化部署 Continuous Batching: 02模型开发/04模型推理/服务化部署 Continuous Batching.md
+      - 推理性能指标: 02模型开发/04模型推理/推理性能指标 TTFT TPOT Throughput.md
+  - 应用开发:
+    - 应用开发总览: 04应用开发/README.md
+    - RAG: 04应用开发/01AI_Agent/01RAG/RAEDME.md
+    - Agent (Manus): 04应用开发/01AI_Agent/Manus.md
+    - 应用编排 (Dify): 04应用开发/02应用编排/dify.md
+    - 提示词工程: 04应用开发/03提示词工程/Google提示工程白皮书.md
+    - Skill 编写: 04应用开发/04skill/如何写好-Skill：一份终极实战经验手册.md
+    - Harness 工程: 04应用开发/05Harness工程/README.md
+    - 部署工具 (ollama): 04应用开发/08相关工具/03部署工具/ollama.md
+    - 前端集成 (Open WebUI): 04应用开发/08相关工具/04前端集成/open-webui.md
+  - 算子开发:
+    - CANN 算子开发总览: 10算子开发/02_CANN算子开发/README.md
+    - 环境安装: 10算子开发/01_环境安装/install_cann_step_by_step.md
+    - AscendC 算子开发: 10算子开发/02_CANN算子开发/AscendC算子开发.md
+    - AscendC 最佳实践: 10算子开发/02_CANN算子开发/AscendC最佳实践.md
+    - 自定义算子开发: 10算子开发/02_CANN算子开发/自定义算子开发.md
+    - 性能调优: 10算子开发/02_CANN算子开发/性能调优.md
+    - 算子支持列表: 10算子开发/02_CANN算子开发/算子支持列表.md
+    - HCCL 通信原语: 10算子开发/00_基础知识/HCCL通信/通信原语操作.md
+    - 数据格式与精度: 10算子开发/00_基础知识/数据格式与精度.md
+  - 工具:
+    - HuggingFace: 41工具/HuggingFace.md
+    - pdb: 41工具/pdb.md
+    - 学习路径: 41工具/学习路径.md
+    - 开发工具安装配置: 41工具/开发工具安装配置.md
   - 论文:
     - 顶会: 31论文/顶会.md
   - 专项:
@@ -135,7 +177,11 @@ markdown_extensions:
   - pymdownx.magiclink
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed
   - pymdownx.tasklist
   - pymdownx.tilde
