@@ -5,3 +5,4 @@ __pycache__/
 **/*.case
 **/*.base
 **/*.canvas
+.workbuddy/
