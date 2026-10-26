@@ -92,7 +92,25 @@
 
 ### 4.2 横向对比
 
+基准测试总览
+
 ![Kimi K3.1 Pro 基准测试总览](Kimi%20K3.1%20Pro%20%E6%8A%80%E6%9C%AF%E8%B0%83%E7%A0%94%E6%8A%A5%E5%91%8A.assets/benchmark-grid.jpeg)
+
+Science 0.1 的评测榜单：
+
+![image-20261026213203168](Kimi%20K3.1%20Pro%20%E6%8A%80%E6%9C%AF%E8%B0%83%E7%A0%94%E6%8A%A5%E5%91%8A.assets/image-20261026213203168.png)
+
+金融基准测试成绩
+
+![Kimi K3.1 Pro 金融基准测试成绩](Kimi%20K3.1%20Pro%20%E6%8A%80%E6%9C%AF%E8%B0%83%E7%A0%94%E6%8A%A5%E5%91%8A.assets/finance-benchmark.jpeg)
+
+幻觉基准成绩
+
+![Kimi K3.1 Pro 幻觉基准成绩](Kimi%20K3.1%20Pro%20%E6%8A%80%E6%9C%AF%E8%B0%83%E7%A0%94%E6%8A%A5%E5%91%8A.assets/finance-hallucination.jpeg)
+
+内部金融基准成绩
+
+![Kimi K3.1 Pro 内部金融基准成绩](Kimi%20K3.1%20Pro%20%E6%8A%80%E6%9C%AF%E8%B0%83%E7%A0%94%E6%8A%A5%E5%91%8A.assets/finance-internal-benchmark.png)
 
 **结论：**
 
