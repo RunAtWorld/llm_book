@@ -174,7 +174,7 @@
 
 ## 9. 参考
 
-1. **月之暗面官方微信《Kimi K3.1 Pro 已上线开放平台：智能前沿，更进一步》**（2026-10-24）：https://mp.weixin.qq.com/s?__biz=MzkyNzY4NDEzNA==&mid=2247484925&idx=1&sn=5907bc958acb6ef4df86976ff881f77a
+1. **Kimi K3.1 Pro 已上线开放平台：智能前沿，更进一步**: https://mp.weixin.qq.com/s?__biz=MzkyNzY4NDEzNA==&mid=2247484925&idx=1&sn=5907bc958acb6ef4df86976ff881f77a
 2. **Kimi 官方博客《Kimi K3.1 Pro》**：https://kimi.com/blog/kimi-k3-1-pro
 3. **Kimi API 开放平台与模型定价页**：https://platform.moonshot.cn/ ｜ 定价页 https://platform.kimi.com/docs/pricing/chat
 4. **Kimi K3.1 Pro 使用文档（API 调用指南）**：https://platform.kimi.com/docs/guide/kimi-k3-1-pro-quickstart
