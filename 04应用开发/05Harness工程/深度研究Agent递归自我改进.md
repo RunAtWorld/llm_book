@@ -1,9 +1,5 @@
 # 深度研究 Agent 的递归自我改进：2026 全行业调研与算力视角
 
-> 我是一名 AI 算力工程师。过去一年，"深度研究"（Deep Research）从演示玩具变成各大厂标配，背后暗线是**递归自我改进（RSI）**。本文第一人称、算力视角，先用 5W1H 把 RSI 讲透，再拆解 DeepSeek 与唐杰（智谱 GLM）的最新论文，最后专门讨论 RSI 的风险与失效模式。
-
-![深度研究 Agent 递归自我改进概念图](%E6%B7%B1%E5%BA%A6%E7%A0%94%E7%A9%B6Agent%E9%80%92%E5%BD%92%E8%87%AA%E6%88%91%E6%94%B9%E8%BF%9B.assets/deep-research-rsi-hero.png)
-
 ## 一、5W1H 讲懂 RSI
 
 RSI（Recursive Self-Improvement，递归自我改进）= **让 AI 系统自己改进自己**，形成"执行 → 评估 → 改自己 → 再执行"的自主升级闭环。一句话要素速览：
@@ -127,9 +123,9 @@ flowchart LR
 - heavy 模式相对 RHO：平均通过率 **+2.0pp**，单任务成本 **-26.1%**；
 - HarnessPro-Lite 在三大基准通过率不降反升的同时，省下 **17.7%–57.4%** 真实开销。
 
-![性能-成本帕累托前沿](%E6%B7%B1%E5%BA%A6%E7%A0%94%E7%A9%B6Agent%E9%80%92%E5%BD%92%E8%87%AA%E6%88%91%E6%94%B9%E8%BF%9B.assets/pareto-frontier.png)
 
-> 这张图正是算力工程师最在乎的曲线：**性能-成本帕累托前沿被往前推了**。结论不是"换更大模型"，而是"让 agent 多轮递归把自身 harness 改好，性能与成本可以一起优化"。消融还显示：单独抄动态路由或预算钩子会掉点，只有多机制协同（Synergy）才能推前沿。
+
+> 算力工程师最在乎的曲线：**性能-成本帕累托前沿被往前推了**。结论不是"换更大模型"，而是"让 agent 多轮递归把自身 harness 改好，性能与成本可以一起优化"。消融还显示：单独抄动态路由或预算钩子会掉点，只有多机制协同（Synergy）才能推前沿。
 
 ## 四、DeepSeek-V3.2：Agentic 数据引擎 + 把注意力打回线性
 
@@ -224,7 +220,7 @@ flowchart TD
 
 ## 八、结论
 
-我是抱着"这笔算力花得值不值"的心态看这一波的：
+抱着"这笔算力花得值不值"的心态看这一波的：
 
 1. Deep Research 的价值来自**迭代深度**，代价也是迭代深度——算力账单由"循环次数 × 上下文长度"决定，长上下文与工具循环是成本主战场。
 2. RSI 把"自我提升"本身交给 agent；其中**改 harness 比改权重更贴近工程落地且更可控**，HarnessPro 已把"性能+成本"双目标做进递归循环，并用 Pareto 分档适配预算。
@@ -235,19 +231,9 @@ flowchart TD
 
 ## 参考来源
 
-- DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models. arXiv:2512.02556 (2025-12)
-- HarnessPro: Recursive Harness Self-Improvement with Pareto Optimization. arXiv:2610.26770 (2026-10-19)
-- Single-Rollout Asynchronous Optimization (SAO) for Agentic RL. arXiv:2607.07508 (2026-07)
-- CompactionRL: RL with Context Compaction for Long-Horizon Agents. arXiv:2607.05378 (2026-07)
-- Sakana AI RSI Lab / The AI Scientist (Nature, 2026-03-26) / MASS (2026-10) / Darwin Gödel Machine (NeurIPS 2025)
-- OpenAI Introducing Deep Research; Gemini Deep Research Max (2026-04)
-
-## 说明（数据口径）
-
-本文为行业调研与算力视角解读，文中涉及的以下数据均需注意口径：
-
-- **厂商自报基准**：OpenAI、Google Gemini、DeepSeek 等公布的 HLE、GAIA、BrowseComp、SWE-bench、AIME 等基准数字，均为厂商或论文作者自报，本文未做独立复现。
-- **单篇论文结果**：HarnessPro、SAO、CompactionRL、Darwin Gödel Machine 等论文报告的性能提升与成本下降幅度（如 heavy 模式 +2.0pp 通过率 / -26.1% 成本、Lite 省 17.7%–57.4% 等），均来自对应单篇论文，尚未有第三方大规模独立复现。
-- **单一媒体报道**：如 Anthropic 暂停前沿 AI 研发的公开呼吁，来自单一媒体报道，未独立核实。
-
-以上数字仅作行业趋势参考，请以后续官方复现与第三方评测为准。
+1. DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models. arXiv:2512.02556 (2025-12)
+2. HarnessPro: Recursive Harness Self-Improvement with Pareto Optimization. arXiv:2610.26770 (2026-10-19)
+3. Single-Rollout Asynchronous Optimization (SAO) for Agentic RL. arXiv:2607.07508 (2026-07)
+4. CompactionRL: RL with Context Compaction for Long-Horizon Agents. arXiv:2607.05378 (2026-07)
+5. Sakana AI RSI Lab / The AI Scientist (Nature, 2026-03-26) / MASS (2026-10) / Darwin Gödel Machine (NeurIPS 2025)
+6. OpenAI Introducing Deep Research; Gemini Deep Research Max (2026-04)
