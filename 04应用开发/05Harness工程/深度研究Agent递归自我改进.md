@@ -1,4 +1,4 @@
-# 深度研究 Agent 的递归自我改进：2026 全行业调研与算力视角
+# 一文看懂Agent的递归自我改进（RSI）机制
 
 ## 一、5W1H 讲懂 RSI
 
@@ -123,21 +123,40 @@ flowchart LR
 - heavy 模式相对 RHO：平均通过率 **+2.0pp**，单任务成本 **-26.1%**；
 - HarnessPro-Lite 在三大基准通过率不降反升的同时，省下 **17.7%–57.4%** 真实开销。
 
+算力工程师最在乎的曲线：**性能-成本帕累托前沿被往前推了**。结论不是"换更大模型"，而是"让 agent 多轮递归把自身 harness 改好，性能与成本可以一起优化"。消融还显示：单独抄动态路由或预算钩子会掉点，只有多机制协同（Synergy）才能推前沿。
 
+## 四、Agentic 数据引擎落地：DeepSeek V4.1 Flash-1017 与 Kimi K3.1 Pro
 
-> 算力工程师最在乎的曲线：**性能-成本帕累托前沿被往前推了**。结论不是"换更大模型"，而是"让 agent 多轮递归把自身 harness 改好，性能与成本可以一起优化"。消融还显示：单独抄动态路由或预算钩子会掉点，只有多机制协同（Synergy）才能推前沿。
+第三章 HarnessPro 解决的是"让 harness 递归改自己"；但 harness 再聪明，也得有被 agentic 后训练喂饱的底座。2026 年 10 月，国内两家前后脚放出的最新旗舰，正好把 V3.2 设想的"agentic 数据引擎"变成了可量化的现实——而且两者的降本钥匙都不是更大参数量，而是**用（自反馈）RL 把"会干活、还省 token"直接训进权重**，再叠加**把长上下文 KV 成本压到极低**的工程突破。
 
-## 四、DeepSeek-V3.2：Agentic 数据引擎 + 把注意力打回线性
+**DeepSeek V4.1 Flash-1017（2026-10-17版本）**
 
-论文 **DeepSeek-V3.2**（arXiv:2512.02556，2025-12）。三个突破里，后两个直接服务于 agent（即 RSI「Where」里的深度研究/代码场景）：
+- **性质**：V4.1-Flash（2026-09-10）的**后训练 checkpoint 更新**，架构不变，靠**自反馈强化学习（RL with self-feedback）**大幅提升"从零构建完整项目"的 Agent 能力（官方称"许愿式编程"），并针对 DeepSeek Harness、腾讯 CodeBuddy、WorkBuddy 优化，缩短任务耗时与输出长度。
+- **架构与成本突破**：非对称 CED 架构使预填充仅激活 8B、解码 16B 参数；MoE 384 路由专家 / 每 token 激活 6 个；**FP4 主 KV 缓存 + CSA2 + SWA Bounded Replay 把 KV 压到 890 字节/token**，1M 上下文下全局 KV 显存 < ~1GB，**单 token 解码 FLOPs 随上下文长度几乎恒定**（长上下文不再线性爆算）。权重 MIT 开源（约 510GB）。
+- **基准**：Terminal-Bench 4.0 31.2→42.3、DeepSWE v1.1 74.2→77.0（高于 Opus 5 的 74.0、GPT-5.6 Sol 的 73.0）、Automation-Bench 54.8→60.5（高于 Opus 5 的 50.3）、ProgramBench 20.3→29.1、Apex 64.6→72.1。**短板**：纯深度推理 HLE 42.6，仍低于 Opus 5 的 56.3。
+- **成本**：输出 \$0.60/1M（谷）—\$1.20/1M（峰），输入 cache miss \$0.15/1M（谷），命中缓存便宜 98%；官方称多个 Harness 下达到"性能–费用帕累托最优"。新增 Search/Fetch API（5 元 / 千次）。
 
-1. **DSA（DeepSeek Sparse Attention）**：用一个小型 FP8 "lightning indexer" 给每个 query 算分数、选 top-k KV（从 128K 里选约 2048 个），把核心注意力从 O(L²) 降到 O(Lk)。对"深度研究"这种长推理链 + 工具循环，瓶颈从来不是 KV 缓存大小，而是注意力 FLOPs——DSA 直接打掉它。
-2. **Scalable RL**：scaled GRPO + 无偏 KL 估计 + off-policy 稳定化（Keep Routing / Keep Sampling Mask），让 MoE RL 更稳。
-3. **大规模 Agentic 任务合成管线**：**1827 个合成环境、85K 复杂提示词**，冷启动 + 合成 agentic 任务做 RL，泛化到未见过的 τ²-bench、MCP-Universe、MCP-Mark。
+![image-20261027222524622](%E6%B7%B1%E5%BA%A6%E7%A0%94%E7%A9%B6Agent%E9%80%92%E5%BD%92%E8%87%AA%E6%88%91%E6%94%B9%E8%BF%9B.assets/image-20261027222524622.png)
 
-V3.2-Speciale 在 2025 IMO/IOI 拿金牌；基准：HLE 25.1%、AIME 2025 93.1%、SWE-bench Verified 73.1%、BrowseComp 67.6%，且 token 成本低于 Kimi-K2 Thinking。
+**Kimi K3.1 Pro（2026-10-24，即 K3 Pro）**
+- **性质**：Kimi K3（2026-07，2.8T MoE）的**后训练版本**，未重新预训练，靠加大 RL 算力、覆盖数百下游领域把能力拉上来；全球最大开放权重模型之一（权重计划 2026-11-04 开放）。
+- **架构与成本（继承自 K3）**：稀疏 MoE 896 专家 / 每 token 激活 16 个、激活仅约 104B（3.7%）；**Kimi Delta Attention（基于 Gated DeltaNet）**缓解 1M 长上下文的 KV 膨胀；1,048,576 token 原生窗口，**无长上下文加价**。
+- **能力**：长程编程、3D/CAD（驱动 Blender/FreeCAD/Unity/UE/Godot 生成）、金融端到端交付。**Terminal-Bench 4.0 65.7%**（对比 GPT-6 Astra 58.2%、Claude Opus 5.5 66.4%）；Kimi Code Bench 3.0 长程 55.95%→61.2%；Hallu Bench Hard 事实错误率 23.4%→8.3%。**短板**：科学计算（Science 0.1 仅 38.1%）、计算机使用略落后。
+- **成本**：API 单价较 K3 整体下调约 1/3（国内 ¥13/¥68 每 M、海外 \$2/\$10 每 1M），无分时计价；`reasoning_effort` 三档（low/high/max）把算力–成本开关交还开发者。
 
-> 算力含义：**agentic 后训练的数据引擎可以规模化合成**——把"教 agent 用工具"从手工 prompt 工程变成可扩展的 RL 流水线，是 Deep Research 类系统能持续变强的底层供给。DSA 则把推理侧的长上下文成本压回近线性。
+并排看更直观——两者都把"更强 agent 能力"和"更低每任务成本"一起往前推，而非二选一：
+
+| 维度 | DeepSeek V4.1 Flash-1017 | Kimi K3.1 Pro |
+|---|---|---|
+| 发布时间 | 2026-10-17 | 2026-10-24 |
+| 性质 | V4.1-Flash 后训练更新 | K3 后训练版本 |
+| 规模 / 激活 | 552B，prefill 8B / decode 16B | 2.8T，896 专家 / 激活 16（~104B） |
+| 长上下文成本 | KV 890 字节/token，decode FLOPs 恒定 | Gated DeltaNet，1M 无加价 |
+| 后训练核心 | 自反馈 RL（许愿式编程） | 数百领域大规模 agentic RL |
+| 亮点能力 | Agent 编码 / 自动化领先 | 长程编码 / 3D / 金融端到端 |
+| 成本信号 | 输出 \$0.60–1.20/1M，MIT 开源 | 输出 ¥68/M（约 1/3 降幅） |
+
+> 算力含义：V3.2 当年靠 **DSA 稀疏注意力**把推理侧 O(L²) 压回 O(Lk)，而 2026 这批模型把降本同时落在**后训练**与**KV 工程**两层——自反馈 RL 让模型"少走弯路、少吐 token"，FP4 KV 压缩 / Gated DeltaNet 把 1M 上下文的显存与 decode FLOPs 摊平。换言之，"把注意力打回线性"的同一笔账，现在由 **agentic 后训练 + 极致 KV 压缩**共同来还：性能–费用帕累托前沿不是靠堆卡，而是靠让模型更会干活、让长上下文更便宜。这正好和第三章 HarnessPro（改 harness）形成互补——**模型侧自反馈 RL + KV 工程 + harness 侧递归优化，是 2026 年降本的三条并行主线**。
 
 ## 五、算力工程的三条降本主线
 
@@ -237,3 +256,12 @@ flowchart TD
 4. CompactionRL: RL with Context Compaction for Long-Horizon Agents. arXiv:2607.05378 (2026-07)
 5. Sakana AI RSI Lab / The AI Scientist (Nature, 2026-03-26) / MASS (2026-10) / Darwin Gödel Machine (NeurIPS 2025)
 6. OpenAI Introducing Deep Research; Gemini Deep Research Max (2026-04)
+7. DeepSeek V4.1 Flash-1017（2026-10-17）：DeepSeek 官方新闻页 https://www.deepseek.com/news/deepseek-v4-1-flash/ ；技术报告《DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression》arXiv:2609.19969 ；模型权重 HuggingFace `deepseek-ai/DeepSeek-V4.1-Flash-1017`（MIT）。
+8. Kimi K3.1 Pro（Moonshot AI，2026-10-24）：Kimi 官方博客 https://kimi.com/blog/kimi-k3-1-pro ；开放平台 https://platform.moonshot.cn/ 与定价页 https://platform.kimi.com/docs/pricing/chat 。权重计划 2026-11-04 开放。
+
+## 事实标注说明
+
+- 本文所有**基准分数、定价、参数量级、能力描述**均来自模型厂商官方发布与官方技术报告（见参考来源 [7][8] 及各家新闻页），属**厂商自报数据，一律打折看待**，仅供相对趋势参考，不代表独立第三方复现。
+- 第四章 DeepSeek V4.1 Flash-1017 的架构与成本数字（CED 激活参数、KV 890 字节/token、FP4、SWA Bounded Replay 等）取自 2026-09 技术报告 arXiv:2609.19969；1017 版本仅做后训练更新、未改动架构。
+- Kimi K3.1 Pro 的 2.8T / 896 专家 / 激活 16 等结构数据来自 Kimi 官方博客与开放平台文档。
+- 涉及单一来源、未获多方交叉验证的条目，统一在本说明标注，正文不再逐条加 ⚠️。
