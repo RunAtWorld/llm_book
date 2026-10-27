@@ -257,11 +257,5 @@ flowchart TD
 5. Sakana AI RSI Lab / The AI Scientist (Nature, 2026-03-26) / MASS (2026-10) / Darwin Gödel Machine (NeurIPS 2025)
 6. OpenAI Introducing Deep Research; Gemini Deep Research Max (2026-04)
 7. DeepSeek V4.1 Flash-1017（2026-10-17）：DeepSeek 官方新闻页 https://www.deepseek.com/news/deepseek-v4-1-flash/ ；技术报告《DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression》arXiv:2609.19969 ；模型权重 HuggingFace `deepseek-ai/DeepSeek-V4.1-Flash-1017`（MIT）。
-8. Kimi K3.1 Pro（Moonshot AI，2026-10-24）：Kimi 官方博客 https://kimi.com/blog/kimi-k3-1-pro ；开放平台 https://platform.moonshot.cn/ 与定价页 https://platform.kimi.com/docs/pricing/chat 。权重计划 2026-11-04 开放。
+8. Kimi K3.1 Pro（Moonshot AI，2026-10-24）定价页 https://platform.kimi.com/docs/pricing/chat
 
-## 事实标注说明
-
-- 本文所有**基准分数、定价、参数量级、能力描述**均来自模型厂商官方发布与官方技术报告（见参考来源 [7][8] 及各家新闻页），属**厂商自报数据，一律打折看待**，仅供相对趋势参考，不代表独立第三方复现。
-- 第四章 DeepSeek V4.1 Flash-1017 的架构与成本数字（CED 激活参数、KV 890 字节/token、FP4、SWA Bounded Replay 等）取自 2026-09 技术报告 arXiv:2609.19969；1017 版本仅做后训练更新、未改动架构。
-- Kimi K3.1 Pro 的 2.8T / 896 专家 / 激活 16 等结构数据来自 Kimi 官方博客与开放平台文档。
-- 涉及单一来源、未获多方交叉验证的条目，统一在本说明标注，正文不再逐条加 ⚠️。
