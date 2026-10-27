@@ -65,7 +65,7 @@ LLM 的理论地基，重点在 Transformer 与注意力机制。
 
 | 主题 | 文档 | 说明 |
 | --- | --- | --- |
-| Transformer | [模型详解](02模型开发/00基础知识/Transformer模型详解.md) / [Attention Is All You Need](02模型开发/00基础知识/Attention%20Is%20All%20You%20Need.md) / [transfomer](02模型开发/00基础知识/transfomer.md) | Encoder/Decoder、整体结构 |
+| Transformer | [模型详解](02模型开发/00基础知识/Transformer模型详解.md) / [Attention Is All You Need](02模型开发/00基础知识/注意力/Attention%20Is%20All%20You%20Need.md) / [transfomer](02模型开发/00基础知识/transfomer.md) | Encoder/Decoder、整体结构 |
 | Flash Attention | [flash_attention](02模型开发/00基础知识/flash_attention.md) | IO-Aware、分块计算、HBM/SRAM |
 | Norm | [Norm](02模型开发/00基础知识/Norm.md) | Layer Norm / RMS Norm / Deep Norm、Pre/Post-Norm |
 | 优化器 | [优化器](02模型开发/00基础知识/优化器.md) / [权重衰减](02模型开发/00基础知识/ml基础/weight_deacy.md) | Adam、warmup |
