@@ -33,22 +33,33 @@ theme:
 docs_dir: .
 site_dir: site
 
+exclude_docs: |
+  .workbuddy/
+
 nav:
   - 首页: README.md
   - 算力硬件:
-    - NPU 总览: 03算力硬件/01_npu/README.md
-    - 昇腾硬件架构: 03算力硬件/01_npu/昇腾硬件架构.md
-    - CANN 知识: 03算力硬件/01_npu/cann/CANN知识.md
-    - hccn_tool: 03算力硬件/01_npu/cann/hccn_tool.md
-    - 驱动安装 (openEuler): 03算力硬件/01_npu/driver/install_driver_openEuler.md
-    - 驱动安装 (910A Ubuntu): 03算力硬件/01_npu/install_910A_ubuntu20.04.md
-    - NPU 上构建 Docker: 03算力硬件/01_npu/create_docker_on_npu.md
+    - 总览: 03算力硬件/README.md
+    - NPU:
+      - NPU 总览: 03算力硬件/01_npu/README.md
+      - 昇腾硬件架构: 03算力硬件/01_npu/昇腾硬件架构.md
+      - CANN 知识: 03算力硬件/01_npu/cann/CANN知识.md
+      - hccn_tool: 03算力硬件/01_npu/cann/hccn_tool.md
+      - CANN 相关工具: 03算力硬件/01_npu/cann/相关工具.md
+      - 驱动安装 (openEuler): 03算力硬件/01_npu/driver/install_driver_openEuler.md
+      - 驱动安装 (910A Ubuntu): 03算力硬件/01_npu/install_910A_ubuntu20.04.md
+      - NPU 上构建 Docker: 03算力硬件/01_npu/create_docker_on_npu.md
+    - GPU:
+      - GPU 硬件对比: 03算力硬件/02_gpu/01硬件对比.md
+      - GPU 硬件管控: 03算力硬件/02_gpu/GPU硬件管控.md
   - 数据工程:
+    - 数据工程总览: 01数据工程/README.md
     - numpy transpose 与 permute: 01数据工程/numpy/transpose和permute.md
   - 模型开发:
+    - 模型开发总览: 02模型开发/README.md
     - 基础知识:
       - Transformer 模型详解: 02模型开发/00基础知识/Transformer模型详解.md
-      - Attention Is All You Need: 02模型开发/00基础知识/Attention Is All You Need.md
+      - Attention Is All You Need: 02模型开发/00基础知识/注意力/Attention Is All You Need.md
       - transformer: 02模型开发/00基础知识/transfomer.md
       - Flash Attention: 02模型开发/00基础知识/flash_attention.md
       - Norm: 02模型开发/00基础知识/Norm.md
@@ -57,7 +68,9 @@ nav:
       - LLM 中的上下文长度: 02模型开发/00基础知识/LLM中的上下文长度.md
       - MFU 计算公式: 02模型开发/00基础知识/大模型 MFU 计算公式.md
       - 线性度公式: 02模型开发/00基础知识/线性度公式.md
-      - 注意力头: 02模型开发/00基础知识/注意力头.md
+      - 注意力头: 02模型开发/00基础知识/注意力/注意力头.md
+      - 注意力机制：历史演进、优劣对比与代表模型（详细版）: 02模型开发/00基础知识/注意力/注意力机制：历史演进、优劣对比与代表模型（详细版）.md
+      - 注意力机制：历史演进、优劣对比与代表模型（精简版）: 02模型开发/00基础知识/注意力/注意力机制：历史演进、优劣对比与代表模型（精简版）.md
       - GRPO 原理: 02模型开发/00基础知识/grpo.md
       - 位置编码 RoPE与ALiBi: 02模型开发/00基础知识/位置编码 RoPE与ALiBi.md
       - KV Cache与PagedAttention: 02模型开发/00基础知识/KV Cache与PagedAttention.md
@@ -74,6 +87,7 @@ nav:
       - Kimi K2 MoE: 02模型开发/01模型结构/01LLM模型/kimi/Kimi K2 MoE.md
       - 多模态模型结构: 02模型开发/01模型结构/01LLM模型/multimodal/多模态模型结构 LLaVA Qwen-VL InternVL.md
       - Embedding 模型 BGE M3: 02模型开发/01模型结构/01LLM模型/embedding/BGE与M3 Embedding模型.md
+      - Transformer 基础: 02模型开发/01模型结构/transfomer.md
     - 模型训练:
       - 模型并行知识: 02模型开发/02模型训练/训练并行/模型并行知识.md
       - 内存计算: 02模型开发/02模型训练/内存计算.md
@@ -113,10 +127,12 @@ nav:
     - 模型评测: 02模型开发/03模型评测/RAEDME.md
     - 模型推理:
       - 推理总览: 02模型开发/04模型推理/RAEDME.md
-      - MindIE:
-        - 安装: 02模型开发/04模型推理/MindIE/README.md
-        - 推理接口: 02模型开发/04模型推理/MindIE/MindIE推理接口.md
-        - 性能调优: 02模型开发/04模型推理/MindIE/性能调优.md
+      - 推理框架:
+        - 推理框架总览: 02模型开发/04模型推理/01推理框架/READMD.md
+        - MindIE:
+          - 安装: 02模型开发/04模型推理/01推理框架/MindIE/README.md
+          - 推理接口: 02模型开发/04模型推理/01推理框架/MindIE/MindIE推理接口.md
+          - 性能调优: 02模型开发/04模型推理/01推理框架/MindIE/性能调优.md
       - BGE: 02模型开发/04模型推理/BGE.md
       - QWQ ATB-MindIE 版: 02模型开发/04模型推理/QWQ-ATB_MindIE版.md
       - QWQ MindSpore-MindIE 版: 02模型开发/04模型推理/QWQ-MindSpore_MindIE版.md
@@ -131,18 +147,30 @@ nav:
     - 应用开发总览: 04应用开发/README.md
     - RAG: 04应用开发/01AI_Agent/01RAG/RAEDME.md
     - Agent (Manus): 04应用开发/01AI_Agent/Manus.md
-    - 应用编排 (Dify): 04应用开发/02应用编排/dify.md
-    - 提示词工程: 04应用开发/03提示词工程/Google提示工程白皮书.md
+    - 应用编排:
+      - 应用编排总览: 04应用开发/02应用编排/RAEDME.md
+      - Dify: 04应用开发/02应用编排/dify.md
+    - 提示词工程:
+      - 提示词工程总览: 04应用开发/03提示词工程/RAEDME.md
+      - Google 提示工程白皮书: 04应用开发/03提示词工程/Google提示工程白皮书.md
     - Skill 编写: 04应用开发/04skill/如何写好-Skill：一份终极实战经验手册.md
-    - Harness 工程: 04应用开发/05Harness工程/README.md
-    - 部署工具 (ollama): 04应用开发/08相关工具/03部署工具/ollama.md
-    - 前端集成 (Open WebUI): 04应用开发/08相关工具/04前端集成/open-webui.md
+    - Harness 工程:
+      - 总览: 04应用开发/05Harness工程/README.md
+      - 深度研究 Agent 递归自我改进: 04应用开发/05Harness工程/深度研究Agent递归自我改进.md
+    - 相关工具:
+      - 模型权重 (HuggingFace): 04应用开发/08相关工具/01模型权重/hf.md
+      - 部署工具 (ollama): 04应用开发/08相关工具/03部署工具/ollama.md
+      - 前端集成 (Open WebUI): 04应用开发/08相关工具/04前端集成/open-webui.md
+      - AI 生态周边: 04应用开发/09周边工具/AI工具.md
+      - jinja2: 04应用开发/09周边工具/jinja2.md
+    - 应用案例: 04应用开发/10应用案例/RAEDME.md
   - 算子开发:
     - CANN 算子开发总览: 10算子开发/02_CANN算子开发/README.md
     - 环境安装: 10算子开发/01_环境安装/install_cann_step_by_step.md
     - AscendC 算子开发: 10算子开发/02_CANN算子开发/AscendC算子开发.md
     - AscendC 最佳实践: 10算子开发/02_CANN算子开发/AscendC最佳实践.md
     - 自定义算子开发: 10算子开发/02_CANN算子开发/自定义算子开发.md
+    - 第一个算子开发体验 (Sinh): 10算子开发/02_CANN算子开发/01_第一个算子开发体验Sinh.md
     - 性能调优: 10算子开发/02_CANN算子开发/性能调优.md
     - 算子支持列表: 10算子开发/02_CANN算子开发/算子支持列表.md
     - HCCL 通信原语: 10算子开发/00_基础知识/HCCL通信/通信原语操作.md
@@ -152,11 +180,19 @@ nav:
     - pdb: 41工具/pdb.md
     - 学习路径: 41工具/学习路径.md
     - 开发工具安装配置: 41工具/开发工具安装配置.md
+    - AI 工具集合: src/ai_tool_set.md
   - 论文:
     - 顶会: 31论文/顶会.md
   - 专项:
     - 超节点概述: 51专项/511超节点/超节点概述.md
     - 昇腾950: 51专项/511超节点/昇腾950/README.md
+    - 模型专项:
+      - Kimi 系列:
+        - Kimi K3.1 Pro 技术调研报告: 51专项/512模型专项/512-01-kimi系列/Kimi K3.1 Pro 技术调研报告.md
+      - DeepSeek 系列:
+        - DeepInfer 技术调研报告: 51专项/512模型专项/512-02-deepseek系列/DeepInfer技术调研报告.md
+        - DeepSeek 昇腾优化技术洞察: 51专项/512模型专项/512-02-deepseek系列/DeepSeek 昇腾优化技术洞察.md
+        - DeepSeek 开源昇腾基础组件: 51专项/512模型专项/512-02-deepseek系列/ref/DeepSeek 开源昇腾基础组件.md
 
 markdown_extensions:
   - admonition
